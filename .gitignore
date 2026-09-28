@@ -1,0 +1,26 @@
+# Environment and system files
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# Ignore user uploaded documents but keep folder structure and security rules
+uploads/passports/*
+!uploads/passports/.gitkeep
+
+uploads/identification/*
+!uploads/identification/.gitkeep
+
+uploads/fee-structures/*
+!uploads/fee-structures/.gitkeep
+
+uploads/supporting-documents/*
+!uploads/supporting-documents/.gitkeep
+
+!uploads/.htaccess
