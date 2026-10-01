@@ -1,7 +1,17 @@
-# Environment and system files
+# Environment, secrets and sensitive files
+.env
+.env.*
+*.env
+*.key
+*.cert
+*.pem
 .DS_Store
 Thumbs.db
+Desktop.ini
 *.log
+*.bak
+*.tmp
+
 
 # IDE & Editor files
 .vscode/
