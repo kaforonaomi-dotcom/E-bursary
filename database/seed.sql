@@ -16,16 +16,6 @@ ON DUPLICATE KEY UPDATE
 INSERT INTO programs (name, description, education_level, maximum_amount, application_open_date, application_close_date, status, created_at)
 VALUES
     (
-        'County Academic Excellence Bursary 2026',
-        'General financial support fund for bright, disciplined and needy students enrolled in accredited learning institutions.',
-        'all',
-        50000.00,
-        CURDATE(),
-        DATE_ADD(CURDATE(), INTERVAL 60 DAY),
-        'active',
-        NOW()
-    ),
-    (
         'High School Tuition & Boarding Bursary 2026',
         'Direct tuition assistance for secondary school students in boarding and day secondary schools to prevent school dropouts.',
         'high_school',

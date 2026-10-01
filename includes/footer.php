@@ -16,7 +16,7 @@ if (!isset($basePath)) {
 </div><!-- /.d-flex -->
 
 <!-- Bootstrap 5 Bundle JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?php echo $basePath; ?>assets/js/bootstrap.bundle.min.js"></script>
 
 <!-- Custom App JS -->
 <script src="<?php echo $basePath; ?>assets/app.js"></script>

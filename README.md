@@ -86,3 +86,4 @@ A web-based Electronic Bursary Management System built with PHP, MySQL/MariaDB, 
 - **XSS Mitigation**: Contextual HTML entity escaping (`e()`).
 - **CSRF Protection**: Form token generation and validation.
 - **Secure File Uploads**: Extension whitelisting, MIME type verification, unique sanitized filenames, and `.htaccess` script execution prevention.
+

@@ -111,6 +111,16 @@ if (isset($_GET['toggle_status']) && isset($_GET['id'])) {
     exit;
 }
 
+// Handle Delete Program
+if (isset($_GET['delete']) && isset($_GET['id'])) {
+    $pId = (int)$_GET['id'];
+    $del = $pdo->prepare("DELETE FROM programs WHERE id = ?");
+    $del->execute([$pId]);
+    setFlash('success', 'Bursary program removed successfully.');
+    header('Location: programs.php');
+    exit;
+}
+
 // Fetch all programs with application count
 $programs = $pdo->query("
     SELECT p.*,
@@ -220,6 +230,9 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                                                     </button>
                                                     <a href="programs.php?toggle_status=1&id=<?php echo $prog['id']; ?>" class="btn btn-outline-<?php echo $prog['status'] === 'active' ? 'warning' : 'success'; ?>" title="<?php echo $prog['status'] === 'active' ? 'Deactivate' : 'Activate'; ?>">
                                                         <i class="bi <?php echo $prog['status'] === 'active' ? 'bi-pause-circle' : 'bi-play-circle'; ?>"></i>
+                                                    </a>
+                                                    <a href="programs.php?delete=1&id=<?php echo $prog['id']; ?>" class="btn btn-outline-danger" title="Remove Program" data-confirm="Are you sure you want to remove this bursary program?">
+                                                        <i class="bi bi-trash"></i>
                                                     </a>
                                                 </div>
                                             </td>

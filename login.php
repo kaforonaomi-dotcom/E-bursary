@@ -10,10 +10,8 @@ session_start();
 
     <title>Login - E-Bursary Management System</title>
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/bootstrap-icons.min.css" rel="stylesheet">
 
     <style>
         body {
@@ -191,5 +189,6 @@ session_start();
 
 </div>
 
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
