@@ -22,7 +22,10 @@ $approvedApplications = (int)$stmt->fetchColumn();
 $totalAllocated = (float)$pdo->query("SELECT COALESCE(SUM(approved_amount), 0) FROM allocations WHERE status != 'pending'")->fetchColumn();
 $totalDisbursed = (float)$pdo->query("SELECT COALESCE(SUM(amount), 0) FROM disbursements WHERE status = 'completed'")->fetchColumn();
 
-// 2. Recent Applications
+// 2. Category Bursary Fund Stats & Deductions
+$fundStats = getCategoryFundStats($pdo);
+
+// 3. Recent Applications
 $recentAppsStmt = $pdo->query("
     SELECT a.*, ap.first_name, ap.last_name, ap.id_number, p.name AS program_name
     FROM applications a
@@ -108,6 +111,9 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                     </div>
                 </div>
             </div>
+
+            <!-- BURSARY ACCOUNT FUNDS & DEDUCTIONS BALANCE SECTION -->
+            <?php echo renderCategoryFundCards($fundStats); ?>
 
             <!-- QUICK ACTIONS -->
             <div class="card-custom mb-4">

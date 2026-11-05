@@ -769,5 +769,130 @@ function checkProgramFundEligibility(PDO $pdo, int $programId): array {
     return ['allowed' => true, 'reason' => '', 'remaining' => $remaining];
 }
 
+/**
+ * Render Visual Category Bursary Fund Accounts & Deductions Ledger Section
+ */
+function renderCategoryFundCards(array $fundStats): string {
+    $threshold = $fundStats['threshold'] ?? 20000.00;
+    $grandBudget = $fundStats['grand_budget'] ?? 0.00;
+    $grandGivenOut = $fundStats['grand_given_out'] ?? 0.00;
+    $grandRemaining = $fundStats['grand_remaining'] ?? 0.00;
+    $grandDisbursed = $fundStats['grand_disbursed'] ?? 0.00;
+
+    $html = '<div class="card-custom mb-4 border-0 shadow-sm">';
+    $html .= '  <div class="card-header-custom bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">';
+    $html .= '    <div>';
+    $html .= '      <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-bank2 text-success me-2"></i>Bursary Account Allocations & Deductions Balance</h5>';
+    $html .= '      <p class="text-muted small mb-0">Live statutory accounts for University (4.5M), High School (3.3M), and Primary (2.0M). A category closes automatically when remaining funds drop below KES 20,000.</p>';
+    $html .= '    </div>';
+    $html .= '    <div class="d-flex align-items-center gap-2">';
+    $html .= '      <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-2"><i class="bi bi-shield-lock-fill me-1"></i>Closing Threshold: KES ' . number_format($threshold, 2) . '</span>';
+    $html .= '    </div>';
+    $html .= '  </div>';
+
+    $html .= '  <div class="card-body-custom pt-3">';
+    
+    // Top Grand Summary Bar
+    $html .= '    <div class="row g-2 mb-4 p-3 bg-light rounded border align-items-center">';
+    $html .= '      <div class="col-6 col-md-3 border-end">';
+    $html .= '        <span class="text-muted small d-block">Grand Total Bursary Budget</span>';
+    $html .= '        <strong class="fs-6 text-dark">' . formatMoney($grandBudget) . '</strong>';
+    $html .= '      </div>';
+    $html .= '      <div class="col-6 col-md-3 border-end">';
+    $html .= '        <span class="text-muted small d-block">Total Given Out (Deductions)</span>';
+    $html .= '        <strong class="fs-6 text-danger">- ' . formatMoney($grandGivenOut) . '</strong>';
+    $html .= '      </div>';
+    $html .= '      <div class="col-6 col-md-3 border-end">';
+    $html .= '        <span class="text-muted small d-block">Total Available Balance</span>';
+    $html .= '        <strong class="fs-6 text-success">' . formatMoney($grandRemaining) . '</strong>';
+    $html .= '      </div>';
+    $html .= '      <div class="col-6 col-md-3">';
+    $html .= '        <span class="text-muted small d-block">Disbursed to Institutions</span>';
+    $html .= '        <strong class="fs-6 text-primary">' . formatMoney($grandDisbursed) . '</strong>';
+    $html .= '      </div>';
+    $html .= '    </div>';
+
+    // 3 Category Cards
+    $html .= '    <div class="row g-3">';
+    foreach ($fundStats['categories'] as $cat) {
+        $isClosed = $cat['is_closed_by_threshold'];
+        $progBarColor = $isClosed ? 'bg-danger' : ($cat['percentage_used'] > 85 ? 'bg-warning' : 'bg-success');
+
+        $html .= '    <div class="col-lg-4">';
+        $html .= '      <div class="fund-card ' . ($isClosed ? 'fund-card-closed' : '') . '">';
+
+        // Card Header
+        $html .= '        <div class="d-flex justify-content-between align-items-start mb-3">';
+        $html .= '          <div class="d-flex align-items-center gap-2">';
+        $html .= '            <div class="p-2 rounded-circle ' . e($cat['badge_class']) . ' text-white"><i class="bi ' . e($cat['icon']) . ' fs-5"></i></div>';
+        $html .= '            <div>';
+        $html .= '              <h6 class="fw-bold mb-0 text-dark">' . e($cat['title']) . '</h6>';
+        $html .= '              <small class="text-muted">Max: ' . formatMoney($cat['max_per_applicant']) . ' / applicant</small>';
+        $html .= '            </div>';
+        $html .= '          </div>';
+
+        if ($isClosed) {
+            $html .= '        <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>DEADLINE CLOSED</span>';
+        } else {
+            $html .= '        <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Active & Open</span>';
+        }
+        $html .= '        </div>';
+
+        // Account Financial Metrics
+        $html .= '        <div class="fund-metric-row">';
+        $html .= '          <span class="text-muted">Initial Office Allocation:</span>';
+        $html .= '          <strong class="text-dark">' . formatMoney($cat['initial_budget']) . '</strong>';
+        $html .= '        </div>';
+
+        $html .= '        <div class="fund-metric-row">';
+        $html .= '          <span class="text-muted">Money Given Out (Deductions):</span>';
+        $html .= '          <span class="text-danger fw-bold">- ' . formatMoney($cat['given_out']) . ' <small class="text-muted fw-normal">(' . $cat['approved_count'] . ' awarded)</small></span>';
+        $html .= '        </div>';
+
+        $html .= '        <div class="fund-metric-row">';
+        $html .= '          <span class="text-muted">Remaining Account Balance:</span>';
+        $html .= '          <span class="fw-bold ' . ($isClosed ? 'text-danger' : 'text-success') . ' fs-6">' . formatMoney($cat['remaining']) . '</span>';
+        $html .= '        </div>';
+
+        $html .= '        <div class="fund-metric-row">';
+        $html .= '          <span class="text-muted">Disbursed to Institution:</span>';
+        $html .= '          <span class="text-muted fw-semibold">' . formatMoney($cat['disbursed']) . '</span>';
+        $html .= '        </div>';
+
+        // Progress bar
+        $html .= '        <div class="mt-3">';
+        $html .= '          <div class="d-flex justify-content-between small text-muted mb-1">';
+        $html .= '            <span>Fund Utilized: <strong>' . $cat['percentage_used'] . '%</strong></span>';
+        $html .= '            <span>Remaining: <strong>' . formatMoney($cat['remaining']) . '</strong></span>';
+        $html .= '          </div>';
+        $html .= '          <div class="progress" style="height: 8px;">';
+        $html .= '            <div class="progress-bar ' . $progBarColor . '" role="progressbar" style="width: ' . $cat['percentage_used'] . '%;" aria-valuenow="' . $cat['percentage_used'] . '" aria-valuemin="0" aria-valuemax="100"></div>';
+        $html .= '          </div>';
+        $html .= '        </div>';
+
+        // Alert notice
+        if ($isClosed) {
+            $html .= '        <div class="alert alert-danger py-2 px-2 small mt-3 mb-0">';
+            $html .= '          <i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Account Closed:</strong> Remaining funds (' . formatMoney($cat['remaining']) . ') are below the KES ' . number_format($threshold, 2) . ' threshold. Applications are automatically closed to avoid unfunded allocations.';
+            $html .= '        </div>';
+        } else {
+            $html .= '        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top small text-muted">';
+            $html .= '          <span><i class="bi bi-shield-check text-success me-1"></i>Closing Threshold:</span>';
+            $html .= '          <span class="fw-semibold text-danger">KES ' . number_format($threshold, 2) . '</span>';
+            $html .= '        </div>';
+        }
+
+        $html .= '      </div>';
+        $html .= '    </div>';
+    }
+    $html .= '    </div>'; // end row
+
+    $html .= '  </div>';
+    $html .= '</div>';
+
+    return $html;
+}
+
+
 
 
