@@ -383,6 +383,11 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                                 <input type="number" step="0.01" name="maximum_amount" class="form-control" placeholder="e.g. 50000">
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label">Total Category Office Budget (KES) <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" name="total_budget" class="form-control" value="0.00" required placeholder="e.g. 4500000">
+                                <div class="form-text">Budget for this office account. Applications auto-close when remaining &lt; KES 20,000.</div>
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label">Application Open Date</label>
                                 <input type="date" name="application_open_date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
                             </div>
