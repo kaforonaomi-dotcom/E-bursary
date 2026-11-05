@@ -176,6 +176,9 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                 </div>
             <?php endif; ?>
 
+            <!-- BURSARY ACCOUNT FUNDS & DEDUCTIONS BALANCE SECTION -->
+            <?php echo renderCategoryFundCards($fundStats); ?>
+
             <div class="card-custom">
                 <div class="card-header-custom">
                     <div>
@@ -192,6 +195,8 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                                 <tr>
                                     <th>Program Name</th>
                                     <th>Target Education</th>
+                                    <th>Total Budget</th>
+                                    <th>Remaining Balance</th>
                                     <th>Max Cap</th>
                                     <th>Application Period</th>
                                     <th>Status</th>
@@ -202,13 +207,18 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                             <tbody>
                                 <?php if (empty($programs)): ?>
                                     <tr>
-                                        <td colspan="7" class="text-center py-5 text-muted">
+                                        <td colspan="9" class="text-center py-5 text-muted">
                                             <i class="bi bi-mortarboard fs-2 d-block mb-2 text-muted"></i>
                                             No bursary programs found. Click "Add New Program" to establish one.
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($programs as $prog): ?>
+                                    <?php foreach ($programs as $prog):
+                                        $progBudget = (float)$prog['total_budget'];
+                                        $progAllocated = (float)$prog['total_allocated'];
+                                        $progRemaining = max(0, $progBudget - $progAllocated);
+                                        $progCritical = ($progRemaining < 20000.00);
+                                    ?>
                                         <tr>
                                             <td>
                                                 <strong class="text-dark"><?php echo e($prog['name']); ?></strong>
@@ -217,6 +227,17 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                                                 <?php endif; ?>
                                             </td>
                                             <td><?php echo renderStatusBadge($prog['education_level']); ?></td>
+                                            <td class="fw-bold text-dark">
+                                                <?php echo formatMoney($progBudget); ?>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold <?php echo $progCritical ? 'text-danger' : 'text-success'; ?>">
+                                                    <?php echo formatMoney($progRemaining); ?>
+                                                </span>
+                                                <?php if ($progCritical): ?>
+                                                    <span class="badge bg-danger ms-1 d-block" style="font-size: 0.68rem; width: fit-content;">&lt; 20k Reserve Closed</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="fw-bold text-success">
                                                 <?php echo $prog['maximum_amount'] ? formatMoney((float)$prog['maximum_amount']) : 'No Limit'; ?>
                                             </td>
@@ -283,6 +304,11 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                                                                 <div class="col-md-6">
                                                                     <label class="form-label">Maximum Award Amount (KES)</label>
                                                                     <input type="number" step="0.01" name="maximum_amount" class="form-control" value="<?php echo e($prog['maximum_amount']); ?>" placeholder="Leave blank for unlimited">
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label">Total Category Office Budget (KES) <span class="text-danger">*</span></label>
+                                                                    <input type="number" step="0.01" name="total_budget" class="form-control" value="<?php echo e($prog['total_budget']); ?>" required placeholder="e.g. 4500000">
+                                                                    <div class="form-text">Budget for this office account (Uni: 4.5M, HighSch: 3.3M, Primary: 2M).</div>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <label class="form-label">Application Open Date</label>
