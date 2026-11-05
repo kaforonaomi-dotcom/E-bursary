@@ -406,7 +406,24 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                                     <div class="mb-3" id="approved_amount_group" style="display: <?php echo ($reviewData['status'] === 'approved') ? 'block' : 'none'; ?>;">
                                         <label class="form-label fw-bold text-success">Approved Allocation Amount (KES) <span class="text-danger">*</span></label>
                                         <input type="number" step="0.01" min="1000" name="approved_amount" class="form-control" value="<?php echo e($reviewAlloc['approved_amount'] ?? $reviewData['requested_amount']); ?>" placeholder="Enter approved amount">
-                                        <small class="text-muted">Requested: <?php echo formatMoney((float)$reviewData['requested_amount']); ?></small>
+                                        <div class="d-flex justify-content-between small text-muted mt-1">
+                                            <span>Requested: <?php echo formatMoney((float)$reviewData['requested_amount']); ?></span>
+                                            <span>Max: <?php echo formatMoney((float)$reviewData['program_max']); ?></span>
+                                        </div>
+
+                                        <?php
+                                        $reviewFundCheck = checkProgramFundEligibility($pdo, (int)$reviewData['program_id']);
+                                        $availableForThisReview = $reviewFundCheck['remaining'] + (float)($reviewAlloc['approved_amount'] ?? 0);
+                                        ?>
+                                        <div class="p-2 mt-2 rounded bg-light border <?php echo ($availableForThisReview < 20000) ? 'border-danger text-danger' : ''; ?>">
+                                            <div class="d-flex justify-content-between align-items-center small">
+                                                <span><i class="bi bi-wallet2 me-1"></i>Available Fund in Account:</span>
+                                                <strong class="<?php echo ($availableForThisReview < 20000) ? 'text-danger' : 'text-success'; ?>"><?php echo formatMoney($availableForThisReview); ?></strong>
+                                            </div>
+                                            <?php if ($availableForThisReview < 20000): ?>
+                                                <small class="text-danger d-block mt-1"><i class="bi bi-lock-fill me-1"></i>Account balance below KES 20,000 threshold.</small>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
 
                                     <!-- REJECTION REASON FIELD -->
