@@ -338,20 +338,10 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <form action="documents.php" method="POST" enctype="multipart/form-data" class="d-inline-block m-0">
-                                                    <?php echo csrfInput(); ?>
-                                                    <input type="hidden" name="upload_doc" value="1">
-                                                    <input type="hidden" name="document_type" value="<?php echo e($key); ?>">
-                                                    <label class="btn btn-sm <?php echo $uploaded ? 'btn-outline-secondary' : 'btn-green'; ?> mb-0 text-nowrap cursor-pointer">
-                                                        <i class="bi <?php echo $uploaded ? 'bi-arrow-repeat' : 'bi-cloud-arrow-up'; ?> me-1"></i> <?php echo $uploaded ? 'Replace' : 'Upload File'; ?>
-                                                        <input type="file" name="document_file" class="d-none auto-upload-input" accept=".<?php echo implode(', .', $meta['allowed']); ?>">
-                                                    </label>
-                                                </form>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#uploadModal-<?php echo e($key); ?>" title="Upload through dialog">
-                                                    <i class="bi bi-window-stack"></i>
-                                                </button>
-                                            </div>
+                                            <!-- Choose File Dialog Trigger -->
+                                            <button type="button" class="btn btn-sm <?php echo $uploaded ? 'btn-outline-secondary' : 'btn-green'; ?> text-nowrap" data-bs-toggle="modal" data-bs-target="#uploadModal-<?php echo e($key); ?>">
+                                                <i class="bi <?php echo $uploaded ? 'bi-arrow-repeat' : 'bi-folder2-open'; ?> me-1"></i> <?php echo $uploaded ? 'Replace File' : 'Choose File'; ?>
+                                            </button>
                                         </td>
                                     </tr>
 

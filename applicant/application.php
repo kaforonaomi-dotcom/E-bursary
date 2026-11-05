@@ -61,7 +61,24 @@ if ($application && !empty($application['program_id'])) {
 $progSql .= " ORDER BY name ASC";
 $progStmt = $pdo->prepare($progSql);
 $progStmt->execute($progParams);
-$availablePrograms = $progStmt->fetchAll();
+$rawPrograms = $progStmt->fetchAll();
+
+// Filter programs by remaining funds threshold (< KES 20,000 closes the category)
+$availablePrograms = [];
+$lowFundClosedCategory = false;
+foreach ($rawPrograms as $prog) {
+    $fundCheck = checkProgramFundEligibility($pdo, (int)$prog['id']);
+    if ($fundCheck['allowed']) {
+        $availablePrograms[] = $prog;
+    } else {
+        $lowFundClosedCategory = true;
+        // Keep in list only if applicant already has a draft for it so they can see why it's closed
+        if ($application && (int)$application['program_id'] === (int)$prog['id']) {
+            $prog['is_threshold_closed'] = true;
+            $availablePrograms[] = $prog;
+        }
+    }
+}
 
 $errors = [];
 
