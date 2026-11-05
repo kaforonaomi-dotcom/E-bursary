@@ -44,6 +44,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_action'])) {
                     throw new Exception('Application not found.');
                 }
 
+                // If approving, verify category fund balance
+                $pId = (int)$curApp['program_id'];
+                $existingAlloc = null;
+                $autoCloseNotice = '';
+
+                if ($newStatus === 'approved') {
+                    $fundCheck = checkProgramFundEligibility($pdo, $pId);
+                    $currAllocAmt = 0.00;
+                    $allocCheck = $pdo->prepare("SELECT id, approved_amount FROM allocations WHERE application_id = ?");
+                    $allocCheck->execute([$appId]);
+                    $existingAlloc = $allocCheck->fetch();
+                    if ($existingAlloc) {
+                        $currAllocAmt = (float)$existingAlloc['approved_amount'];
+                    }
+                    $availableForThis = $fundCheck['remaining'] + $currAllocAmt;
+
+                    if ($approvedAmount > $availableForThis) {
+                        throw new Exception("Approved amount (" . formatMoney($approvedAmount) . ") exceeds the available category fund balance for " . e($curApp['program_name']) . " (" . formatMoney($availableForThis) . " available).");
+                    }
+                }
+
                 // Update application
                 $upStmt = $pdo->prepare("
                     UPDATE applications SET
@@ -63,10 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_action'])) {
 
                 // If approved, create or update allocation record
                 if ($newStatus === 'approved') {
-                    $allocCheck = $pdo->prepare("SELECT id FROM allocations WHERE application_id = ?");
-                    $allocCheck->execute([$appId]);
-                    $existingAlloc = $allocCheck->fetch();
-
                     if ($existingAlloc) {
                         $upAlloc = $pdo->prepare("
                             UPDATE allocations SET
@@ -91,6 +108,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_action'])) {
                             date('Y') . '/' . (date('Y') + 1),
                             'Approved during committee review.'
                         ]);
+                    }
+
+                    // Check if remaining funds have dropped below KES 20,000 threshold to close category
+                    $postCheck = checkProgramFundEligibility($pdo, $pId);
+                    if ($postCheck['remaining'] < 20000) {
+                        $pdo->prepare("UPDATE programs SET status = 'closed', updated_at = NOW() WHERE id = ?")->execute([$pId]);
+                        $autoCloseNotice = " Note: The remaining fund for {$curApp['program_name']} has fallen to " . formatMoney($postCheck['remaining']) . " (below KES 20,000 threshold), so new applications for this category have been automatically closed.";
                     }
                 }
 
