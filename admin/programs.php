@@ -137,6 +137,8 @@ $programs = $pdo->query("
     ORDER BY p.id DESC
 ")->fetchAll();
 
+$fundStats = getCategoryFundStats($pdo);
+
 $pageTitle = 'Manage Bursary Programs';
 $activeNav = 'programs';
 require_once __DIR__ . '/../includes/header.php';
