@@ -118,6 +118,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isSubmitted) {
                 $errors[] = 'The deadline for the selected program has passed.';
             } elseif (!empty($progData['maximum_amount']) && $requestedAmount > (float)$progData['maximum_amount']) {
                 $errors[] = 'Requested amount cannot exceed the program maximum of ' . formatMoney((float)$progData['maximum_amount']) . '.';
+            } else {
+                $fundCheck = checkProgramFundEligibility($pdo, $programId);
+                if (!$fundCheck['allowed']) {
+                    $errors[] = $fundCheck['reason'];
+                }
             }
         }
 
@@ -272,9 +277,19 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                         <div class="mb-4">
                             <label class="form-label fs-6 fw-bold">Select Bursary Program <span class="text-danger">*</span></label>
                             <?php if (empty($availablePrograms)): ?>
-                                <div class="alert alert-warning mb-0">
-                                    No active bursary programs are currently open for your education level (<?php echo e(ucfirst($eduLevel)); ?>). Please check back later.
-                                </div>
+                                <?php if ($lowFundClosedCategory): ?>
+                                    <div class="alert alert-danger d-flex align-items-center mb-0">
+                                        <i class="bi bi-exclamation-octagon-fill fs-4 me-3 text-danger"></i>
+                                        <div>
+                                            <strong>Applications Closed for This Category:</strong>
+                                            Available funds for <strong><?php echo e(ucwords(str_replace('_', ' ', $eduLevel))); ?></strong> bursaries have reached the minimum statutory balance threshold (under KES 20,000). Applications are temporarily closed to avoid overwhelming the fund account.
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="alert alert-warning mb-0">
+                                        No active bursary programs are currently open for your education level (<?php echo e(ucfirst($eduLevel)); ?>). Please check back later.
+                                    </div>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <select name="program_id" id="program_id" class="form-select form-select-lg" required <?php echo $isSystemClosed ? 'disabled' : ''; ?>>
                                     <option value="">-- Choose Active Bursary Program --</option>
