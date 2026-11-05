@@ -28,6 +28,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_allocation'])) {
             $errors[] = 'Invalid allocation status.';
         }
 
+        // Fund Account & Deduction Balance Check
+        $targetAppId = $appId;
+        $currAllocAmt = 0.00;
+        if ($allocId && !$targetAppId) {
+            $tStmt = $pdo->prepare("SELECT application_id, approved_amount FROM allocations WHERE id = ?");
+            $tStmt->execute([$allocId]);
+            $tRow = $tStmt->fetch();
+            $targetAppId = (int)($tRow['application_id'] ?? 0);
+            $currAllocAmt = (float)($tRow['approved_amount'] ?? 0);
+        } elseif ($allocId) {
+            $prevAmtStmt = $pdo->prepare("SELECT approved_amount FROM allocations WHERE id = ?");
+            $prevAmtStmt->execute([$allocId]);
+            $currAllocAmt = (float)$prevAmtStmt->fetchColumn();
+        }
+
+        $progInfo = null;
+        if ($targetAppId) {
+            $appProgStmt = $pdo->prepare("
+                SELECT a.program_id, p.name AS prog_name, p.maximum_amount
+                FROM applications a
+                JOIN programs p ON a.program_id = p.id
+                WHERE a.id = ?
+            ");
+            $appProgStmt->execute([$targetAppId]);
+            $progInfo = $appProgStmt->fetch();
+
+            if ($progInfo && !empty($progInfo['program_id'])) {
+                $pId = (int)$progInfo['program_id'];
+                $fundCheck = checkProgramFundEligibility($pdo, $pId);
+                $availableForThis = $fundCheck['remaining'] + $currAllocAmt;
+
+                if ($amount > $availableForThis) {
+                    $errors[] = "Allocation of " . formatMoney($amount) . " exceeds the remaining fund balance for " . e($progInfo['prog_name']) . " (" . formatMoney($availableForThis) . " available).";
+                }
+            }
+        }
+
         if (empty($errors)) {
             try {
                 if ($allocId) {
@@ -62,6 +99,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_allocation'])) {
                         setFlash('success', 'New allocation created successfully.');
                     }
                 }
+
+                // Check if account remaining is below the KES 20,000 threshold to close category
+                if (!empty($pId)) {
+                    $postCheck = checkProgramFundEligibility($pdo, $pId);
+                    if ($postCheck['remaining'] < 20000) {
+                        $pdo->prepare("UPDATE programs SET status = 'closed', updated_at = NOW() WHERE id = ?")->execute([$pId]);
+                        setFlash('warning', "Allocation saved! Note: The account balance for " . e($progInfo['prog_name']) . " has dropped to " . formatMoney($postCheck['remaining']) . " (below the KES 20,000 threshold), so new applications for this category have been automatically closed.");
+                    }
+                }
+
                 header('Location: allocations.php');
                 exit;
 
