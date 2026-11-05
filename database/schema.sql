@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS programs (
     ) NOT NULL DEFAULT 'all',
 
     maximum_amount DECIMAL(12,2) NULL,
+    total_budget DECIMAL(14,2) NOT NULL DEFAULT 0.00,
 
     application_open_date DATE NULL,
     application_close_date DATE NULL,

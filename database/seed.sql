@@ -12,14 +12,15 @@ VALUES
 ON DUPLICATE KEY UPDATE
     setting_value = VALUES(setting_value);
 
--- Sample Bursary Programs
-INSERT INTO programs (name, description, education_level, maximum_amount, application_open_date, application_close_date, status, created_at)
+-- Sample Bursary Programs with Category Budgets (University: 4.5M, High School: 3.3M, Primary: 2.0M)
+INSERT INTO programs (name, description, education_level, maximum_amount, total_budget, application_open_date, application_close_date, status, created_at)
 VALUES
     (
         'High School Tuition & Boarding Bursary 2026',
         'Direct tuition assistance for secondary school students in boarding and day secondary schools to prevent school dropouts.',
         'high_school',
         25000.00,
+        3300000.00,
         CURDATE(),
         DATE_ADD(CURDATE(), INTERVAL 45 DAY),
         'active',
@@ -30,6 +31,7 @@ VALUES
         'Higher education bursary for undergraduate students in public and chartered private universities, national polytechnics, and TVET colleges.',
         'university',
         40000.00,
+        4500000.00,
         CURDATE(),
         DATE_ADD(CURDATE(), INTERVAL 60 DAY),
         'active',
@@ -40,10 +42,14 @@ VALUES
         'Welfare and educational material support for orphaned, vulnerable, and special needs pupils in primary schools.',
         'primary',
         15000.00,
+        2000000.00,
         CURDATE(),
         DATE_ADD(CURDATE(), INTERVAL 90 DAY),
         'active',
         NOW()
     )
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+ON DUPLICATE KEY UPDATE
+    total_budget = VALUES(total_budget),
+    maximum_amount = VALUES(maximum_amount),
+    description = VALUES(description);
 

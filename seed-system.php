@@ -51,6 +51,7 @@ try {
             'description'     => 'Direct tuition and boarding assistance for secondary school students in public and registered boarding and day schools.',
             'education_level' => 'high_school',
             'maximum_amount'  => 25000.00,
+            'total_budget'    => 3300000.00,
             'open_date'       => date('Y-m-d'),
             'close_date'      => date('Y-m-d', strtotime('+45 days')),
             'status'          => 'active'
@@ -60,6 +61,7 @@ try {
             'description'     => 'Higher education bursary for undergraduate students in public/chartered private universities, national polytechnics, and TVET colleges.',
             'education_level' => 'university',
             'maximum_amount'  => 40000.00,
+            'total_budget'    => 4500000.00,
             'open_date'       => date('Y-m-d'),
             'close_date'      => date('Y-m-d', strtotime('+60 days')),
             'status'          => 'active'
@@ -69,6 +71,7 @@ try {
             'description'     => 'Special needs and vulnerable learner assistance to ensure access to educational materials and basic necessities.',
             'education_level' => 'primary',
             'maximum_amount'  => 15000.00,
+            'total_budget'    => 2000000.00,
             'open_date'       => date('Y-m-d'),
             'close_date'      => date('Y-m-d', strtotime('+90 days')),
             'status'          => 'active'
@@ -76,11 +79,12 @@ try {
     ];
 
     $progStmt = $pdo->prepare("
-        INSERT INTO programs (name, description, education_level, maximum_amount, application_open_date, application_close_date, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO programs (name, description, education_level, maximum_amount, total_budget, application_open_date, application_close_date, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ON DUPLICATE KEY UPDATE
             description = VALUES(description),
             maximum_amount = VALUES(maximum_amount),
+            total_budget = VALUES(total_budget),
             application_close_date = VALUES(application_close_date),
             status = 'active'
     ");
@@ -92,21 +96,22 @@ try {
         $existingProg = $checkP->fetch();
 
         if ($existingProg) {
-            $updP = $pdo->prepare("UPDATE programs SET description = ?, education_level = ?, maximum_amount = ?, application_open_date = ?, application_close_date = ?, status = 'active' WHERE id = ?");
-            $updP->execute([$p['description'], $p['education_level'], $p['maximum_amount'], $p['open_date'], $p['close_date'], $existingProg['id']]);
+            $updP = $pdo->prepare("UPDATE programs SET description = ?, education_level = ?, maximum_amount = ?, total_budget = ?, application_open_date = ?, application_close_date = ?, status = 'active' WHERE id = ?");
+            $updP->execute([$p['description'], $p['education_level'], $p['maximum_amount'], $p['total_budget'], $p['open_date'], $p['close_date'], $existingProg['id']]);
         } else {
             $progStmt->execute([
                 $p['name'],
                 $p['description'],
                 $p['education_level'],
                 $p['maximum_amount'],
+                $p['total_budget'],
                 $p['open_date'],
                 $p['close_date'],
                 $p['status']
             ]);
         }
     }
-    outputMsg("  -> 3 Active bursary programs configured (High School, University/TVET, Primary).", $isCli);
+    outputMsg("  -> 3 Active bursary programs configured with budgets (University: KES 4.5M, High School: KES 3.3M, Primary: KES 2.0M).", $isCli);
 
     // 3. SUPER ADMIN ACCOUNT
     outputMsg("[3/5] Seeding Administrator Account...", $isCli);
