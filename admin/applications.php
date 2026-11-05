@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_action'])) {
 
                 $pdo->commit();
 
-                setFlash('success', "Application #{$curApp['application_number']} status updated to " . ucfirst($newStatus) . " successfully.");
+                setFlash(!empty($autoCloseNotice) ? 'warning' : 'success', "Application #{$curApp['application_number']} status updated to " . ucfirst($newStatus) . " successfully." . $autoCloseNotice);
                 header("Location: applications.php?review=$appId");
                 exit;
 
