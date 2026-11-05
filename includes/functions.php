@@ -561,4 +561,213 @@ function renderApplicantWizardHtml(string $currentStepKey, array $stepsInfo): st
     return $html;
 }
 
+/**
+ * Category Bursary Funds & Deductions Ledger Calculations
+ * Default Allocations:
+ * - University: KES 4,500,000.00 (Max: KES 40,000.00)
+ * - High School: KES 3,300,000.00 (Max: KES 25,000.00)
+ * - Primary School: KES 2,000,000.00 (Max: KES 15,000.00)
+ * Threshold: KES 20,000.00 (Account closes when remaining < KES 20,000)
+ */
+function getCategoryFundStats(PDO $pdo): array {
+    $threshold = 20000.00;
+
+    $categories = [
+        'university' => [
+            'key'            => 'university',
+            'title'          => 'University & TVET Bursary Fund',
+            'badge_class'    => 'bg-primary',
+            'icon'           => 'bi-mortarboard-fill',
+            'default_budget' => 4500000.00,
+            'default_max'    => 40000.00,
+        ],
+        'high_school' => [
+            'key'            => 'high_school',
+            'title'          => 'High School Bursary Fund',
+            'badge_class'    => 'bg-success',
+            'icon'           => 'bi-backpack-fill',
+            'default_budget' => 3300000.00,
+            'default_max'    => 25000.00,
+        ],
+        'primary' => [
+            'key'            => 'primary',
+            'title'          => 'Primary School Bursary Fund',
+            'badge_class'    => 'bg-info text-dark',
+            'icon'           => 'bi-book-fill',
+            'default_budget' => 2000000.00,
+            'default_max'    => 15000.00,
+        ]
+    ];
+
+    $grandBudget = 0.00;
+    $grandGivenOut = 0.00;
+    $grandDisbursed = 0.00;
+    $grandRemaining = 0.00;
+
+    $categoryStats = [];
+
+    foreach ($categories as $level => $cat) {
+        // Find matching program
+        $pStmt = $pdo->prepare("SELECT * FROM programs WHERE education_level = ? ORDER BY id DESC LIMIT 1");
+        $pStmt->execute([$level]);
+        $prog = $pStmt->fetch();
+
+        $progId = $prog ? (int)$prog['id'] : null;
+        $progName = $prog ? $prog['name'] : $cat['title'];
+        $initialBudget = ($prog && !empty($prog['total_budget']) && (float)$prog['total_budget'] > 0)
+            ? (float)$prog['total_budget']
+            : $cat['default_budget'];
+        $maxPerApp = ($prog && !empty($prog['maximum_amount'])) ? (float)$prog['maximum_amount'] : $cat['default_max'];
+        $progStatus = $prog ? $prog['status'] : 'active';
+
+        // Calculate money given out / approved allocations for this program/level
+        $givenOut = 0.00;
+        $disbursed = 0.00;
+        $approvedCount = 0;
+        $pendingCount = 0;
+
+        if ($progId) {
+            $allocStmt = $pdo->prepare("
+                SELECT COALESCE(SUM(al.approved_amount), 0) AS total_given_out,
+                       COUNT(DISTINCT a.id) AS approved_count
+                FROM allocations al
+                JOIN applications a ON al.application_id = a.id
+                WHERE a.program_id = ? AND al.status != 'pending'
+            ");
+            $allocStmt->execute([$progId]);
+            $allocRow = $allocStmt->fetch();
+            $givenOut = (float)($allocRow['total_given_out'] ?? 0);
+            $approvedCount = (int)($allocRow['approved_count'] ?? 0);
+
+            // Disbursements for this program
+            $disbStmt = $pdo->prepare("
+                SELECT COALESCE(SUM(d.amount), 0)
+                FROM disbursements d
+                JOIN allocations al ON d.allocation_id = al.id
+                JOIN applications a ON al.application_id = a.id
+                WHERE a.program_id = ? AND d.status = 'completed'
+            ");
+            $disbStmt->execute([$progId]);
+            $disbursed = (float)$disbStmt->fetchColumn();
+
+            // Count pending applications
+            $pendStmt = $pdo->prepare("
+                SELECT COUNT(*) FROM applications
+                WHERE program_id = ? AND status IN ('submitted', 'pending', 'under_review')
+            ");
+            $pendStmt->execute([$progId]);
+            $pendingCount = (int)$pendStmt->fetchColumn();
+        } else {
+            // Level fallback
+            $allocStmt = $pdo->prepare("
+                SELECT COALESCE(SUM(al.approved_amount), 0) AS total_given_out,
+                       COUNT(DISTINCT a.id) AS approved_count
+                FROM allocations al
+                JOIN applications a ON al.application_id = a.id
+                JOIN programs p ON a.program_id = p.id
+                WHERE p.education_level = ? AND al.status != 'pending'
+            ");
+            $allocStmt->execute([$level]);
+            $allocRow = $allocStmt->fetch();
+            $givenOut = (float)($allocRow['total_given_out'] ?? 0);
+            $approvedCount = (int)($allocRow['approved_count'] ?? 0);
+        }
+
+        $remaining = max(0.00, $initialBudget - $givenOut);
+        $isClosedByThreshold = ($remaining < $threshold);
+        $isClosed = ($progStatus === 'closed') || $isClosedByThreshold;
+
+        $percentageUsed = ($initialBudget > 0) ? min(100.0, round(($givenOut / $initialBudget) * 100, 1)) : 0.0;
+
+        $grandBudget += $initialBudget;
+        $grandGivenOut += $givenOut;
+        $grandDisbursed += $disbursed;
+        $grandRemaining += $remaining;
+
+        $categoryStats[$level] = [
+            'level'                  => $level,
+            'title'                  => $cat['title'],
+            'program_id'             => $progId,
+            'program_name'           => $progName,
+            'badge_class'            => $cat['badge_class'],
+            'icon'                   => $cat['icon'],
+            'initial_budget'         => $initialBudget,
+            'given_out'              => $givenOut,
+            'disbursed'              => $disbursed,
+            'undisbursed'            => max(0.00, $givenOut - $disbursed),
+            'remaining'              => $remaining,
+            'threshold'              => $threshold,
+            'max_per_applicant'      => $maxPerApp,
+            'is_closed_by_threshold' => $isClosedByThreshold,
+            'is_closed'              => $isClosed,
+            'status'                 => $isClosedByThreshold ? 'closed_low_funds' : $progStatus,
+            'approved_count'         => $approvedCount,
+            'pending_count'          => $pendingCount,
+            'percentage_used'        => $percentageUsed
+        ];
+    }
+
+    return [
+        'categories'       => $categoryStats,
+        'grand_budget'     => $grandBudget,
+        'grand_given_out'  => $grandGivenOut,
+        'grand_disbursed'  => $grandDisbursed,
+        'grand_remaining'  => $grandRemaining,
+        'grand_percentage' => ($grandBudget > 0) ? min(100.0, round(($grandGivenOut / $grandBudget) * 100, 1)) : 0.0,
+        'threshold'        => $threshold
+    ];
+}
+
+/**
+ * Check if applications are allowed for a specific program or education level.
+ * Returns array: ['allowed' => bool, 'reason' => string, 'remaining' => float]
+ */
+function checkProgramFundEligibility(PDO $pdo, int $programId): array {
+    $threshold = 20000.00;
+
+    $stmt = $pdo->prepare("SELECT * FROM programs WHERE id = ? LIMIT 1");
+    $stmt->execute([$programId]);
+    $prog = $stmt->fetch();
+
+    if (!$prog) {
+        return ['allowed' => false, 'reason' => 'Bursary program not found.', 'remaining' => 0.00];
+    }
+
+    if ($prog['status'] === 'inactive') {
+        return ['allowed' => false, 'reason' => 'This bursary program is currently inactive.', 'remaining' => 0.00];
+    }
+
+    $initialBudget = (float)($prog['total_budget'] ?? 0);
+    if ($initialBudget <= 0) {
+        $defaults = ['university' => 4500000.00, 'high_school' => 3300000.00, 'primary' => 2000000.00];
+        $initialBudget = $defaults[$prog['education_level']] ?? 2000000.00;
+    }
+
+    $allocStmt = $pdo->prepare("
+        SELECT COALESCE(SUM(al.approved_amount), 0)
+        FROM allocations al
+        JOIN applications a ON al.application_id = a.id
+        WHERE a.program_id = ? AND al.status != 'pending'
+    ");
+    $allocStmt->execute([$programId]);
+    $givenOut = (float)$allocStmt->fetchColumn();
+
+    $remaining = max(0.00, $initialBudget - $givenOut);
+
+    if ($remaining < $threshold) {
+        return [
+            'allowed'   => false,
+            'reason'    => 'Applications for this category are closed because remaining funds have dropped below the KES ' . number_format($threshold, 2) . ' threshold.',
+            'remaining' => $remaining
+        ];
+    }
+
+    if ($prog['status'] === 'closed') {
+        return ['allowed' => false, 'reason' => 'This bursary program is closed for new applications.', 'remaining' => $remaining];
+    }
+
+    return ['allowed' => true, 'reason' => '', 'remaining' => $remaining];
+}
+
+
 
