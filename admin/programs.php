@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_program'])) {
         $desc      = trim($_POST['description'] ?? '');
         $eduLevel  = trim($_POST['education_level'] ?? 'all');
         $maxAmount = !empty($_POST['maximum_amount']) ? (float)$_POST['maximum_amount'] : null;
+        $totalBudget = !empty($_POST['total_budget']) ? (float)$_POST['total_budget'] : 0.00;
         $openDate  = !empty($_POST['application_open_date']) ? $_POST['application_open_date'] : null;
         $closeDate = !empty($_POST['application_close_date']) ? $_POST['application_close_date'] : null;
         $status    = trim($_POST['status'] ?? 'active');
@@ -45,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_program'])) {
                             description = ?,
                             education_level = ?,
                             maximum_amount = ?,
+                            total_budget = ?,
                             application_open_date = ?,
                             application_close_date = ?,
                             status = ?,
@@ -56,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_program'])) {
                         $desc ?: null,
                         $eduLevel,
                         $maxAmount,
+                        $totalBudget,
                         $openDate,
                         $closeDate,
                         $status,
@@ -66,10 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_program'])) {
                     // Create
                     $stmt = $pdo->prepare("
                         INSERT INTO programs (
-                            name, description, education_level, maximum_amount,
+                            name, description, education_level, maximum_amount, total_budget,
                             application_open_date, application_close_date, status, created_at
                         ) VALUES (
-                            ?, ?, ?, ?,
+                            ?, ?, ?, ?, ?,
                             ?, ?, ?, NOW()
                         )
                     ");
@@ -78,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_program'])) {
                         $desc ?: null,
                         $eduLevel,
                         $maxAmount,
+                        $totalBudget,
                         $openDate,
                         $closeDate,
                         $status
