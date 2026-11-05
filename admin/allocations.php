@@ -156,6 +156,7 @@ $unallocatedApps = $pdo->query("
 // Summary stats
 $totalAllocated = (float)$pdo->query("SELECT COALESCE(SUM(approved_amount), 0) FROM allocations WHERE status != 'pending'")->fetchColumn();
 $totalDisbursed = (float)$pdo->query("SELECT COALESCE(SUM(amount), 0) FROM disbursements WHERE status = 'completed'")->fetchColumn();
+$fundStats = getCategoryFundStats($pdo);
 
 $pageTitle = 'Manage Allocations';
 $activeNav = 'allocations';
@@ -196,30 +197,8 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                 </div>
             <?php endif; ?>
 
-            <!-- STATS ROW -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="stat-card">
-                        <div class="stat-title">Total Approved Allocations</div>
-                        <div class="stat-value text-success"><?php echo formatMoney($totalAllocated); ?></div>
-                        <div class="stat-subtitle"><?php echo count($allocations); ?> allocation records</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card">
-                        <div class="stat-title">Disbursed Funds</div>
-                        <div class="stat-value text-primary"><?php echo formatMoney($totalDisbursed); ?></div>
-                        <div class="stat-subtitle">Successfully released payments</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card">
-                        <div class="stat-title">Undisbursed Balance</div>
-                        <div class="stat-value text-warning"><?php echo formatMoney(max(0, $totalAllocated - $totalDisbursed)); ?></div>
-                        <div class="stat-subtitle">Committed funds awaiting release</div>
-                    </div>
-                </div>
-            </div>
+            <!-- CATEGORY BURSARY FUND ACCOUNTS & DEDUCTIONS LEDGER -->
+            <?php echo renderCategoryFundCards($fundStats); ?>
 
             <div class="card-custom">
                 <div class="card-header-custom">
