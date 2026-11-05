@@ -316,53 +316,117 @@ body {
 }
 
 /* Wizard / Multi-step Indicator */
+.wizard-container {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
 .steps-nav {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 30px;
     position: relative;
+    padding: 5px 0 0 0;
+}
+
+.steps-nav::before {
+    content: "";
+    position: absolute;
+    top: 24px;
+    left: 40px;
+    right: 40px;
+    height: 3px;
+    background: #e5e7eb;
+    z-index: 1;
 }
 
 .step-item {
     flex: 1;
     text-align: center;
     position: relative;
+    z-index: 2;
+    cursor: default;
+    text-decoration: none;
+}
+
+a.step-item {
+    cursor: pointer;
+}
+
+a.step-item:hover .step-circle {
+    transform: scale(1.08);
 }
 
 .step-circle {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background-color: #e5e7eb;
+    background-color: #ffffff;
+    border: 2px solid #d1d5db;
     color: #6b7280;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    margin-bottom: 8px;
-    transition: all 0.2s;
+    font-size: 14px;
+    margin-bottom: 6px;
+    transition: all 0.2s ease-in-out;
 }
 
 .step-item.active .step-circle {
     background-color: var(--primary-green);
+    border-color: var(--primary-green);
     color: #ffffff;
-    box-shadow: 0 0 0 4px var(--primary-light);
+    box-shadow: 0 0 0 5px var(--primary-light);
+    transform: scale(1.05);
 }
 
 .step-item.completed .step-circle {
     background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
     color: #ffffff;
 }
 
+.step-item.pending .step-circle {
+    background-color: #f9fafb;
+    border-color: #e5e7eb;
+    color: #9ca3af;
+}
+
 .step-label {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
     color: #6b7280;
     display: block;
+    line-height: 1.2;
 }
 
 .step-item.active .step-label {
     color: var(--primary-green);
+    font-weight: 700;
+}
+
+.step-item.completed .step-label {
+    color: #1f2937;
+}
+
+/* Pulsing highlight for next / ready actions */
+.pulse-btn {
+    animation: btnPulse 2s infinite;
+}
+
+@keyframes btnPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.45);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(25, 135, 84, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+    }
 }
 
 /* Badges */

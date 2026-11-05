@@ -4,7 +4,7 @@
  * E-Bursary Management System
  */
 
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     session_start();
 }
 
@@ -262,4 +262,303 @@ function handleFileUpload(array $file, array $allowedExtensions, string $destina
         'file_size'       => $file['size']
     ];
 }
+
+/**
+ * Retrieve comprehensive status of all application wizard steps for an applicant.
+ */
+function getApplicantStepsStatus(PDO $pdo, int $applicantId, ?array $applicant = null): array {
+    if (!$applicant || !isset($applicant['id_number'])) {
+        $stmt = $pdo->prepare("SELECT * FROM applicants WHERE id = ?");
+        $stmt->execute([$applicantId]);
+        $applicant = $stmt->fetch() ?: [];
+    }
+
+    // Step 1: Personal Profile
+    $personalMissing = [];
+    if (empty($applicant['first_name'])) $personalMissing[] = 'First Name';
+    if (empty($applicant['last_name'])) $personalMissing[] = 'Last Name';
+    if (empty($applicant['id_number'])) $personalMissing[] = 'ID / Birth Certificate No';
+    if (empty($applicant['date_of_birth'])) $personalMissing[] = 'Date of Birth';
+    if (empty($applicant['gender'])) $personalMissing[] = 'Gender';
+    if (empty($applicant['phone'])) $personalMissing[] = 'Primary Phone';
+    if (empty($applicant['email'])) $personalMissing[] = 'Email Address';
+    $personalComplete = empty($personalMissing);
+
+    // Step 2: Academic / Education Details
+    $eduStmt = $pdo->prepare("SELECT * FROM education WHERE applicant_id = ? ORDER BY id DESC LIMIT 1");
+    $eduStmt->execute([$applicantId]);
+    $education = $eduStmt->fetch() ?: null;
+    $eduMissing = [];
+    if (!$education) {
+        $eduMissing[] = 'Education Information';
+    } else {
+        if (empty($education['institution_name'])) $eduMissing[] = 'School / Institution Name';
+        if (empty($education['education_level'])) $eduMissing[] = 'Education Level';
+    }
+    $eduComplete = ($education !== null) && empty($eduMissing);
+
+    // Step 3: Parent / Guardian
+    $guardStmt = $pdo->prepare("SELECT * FROM guardians WHERE applicant_id = ? ORDER BY id DESC LIMIT 1");
+    $guardStmt->execute([$applicantId]);
+    $guardian = $guardStmt->fetch() ?: null;
+
+    $isMinor = false;
+    if (!empty($applicant['date_of_birth'])) {
+        try {
+            $dob = new DateTime($applicant['date_of_birth']);
+            $age = (new DateTime())->diff($dob)->y;
+            if ($age < 18) {
+                $isMinor = true;
+            }
+        } catch (Exception $e) {
+            $isMinor = false;
+        }
+    }
+
+    $guardMissing = [];
+    if ($isMinor) {
+        if (!$guardian) {
+            $guardMissing[] = 'Guardian Details (Mandatory for applicants under 18)';
+        } else {
+            if (empty($guardian['first_name'])) $guardMissing[] = 'Guardian First Name';
+            if (empty($guardian['last_name'])) $guardMissing[] = 'Guardian Last Name';
+            if (empty($guardian['relationship'])) $guardMissing[] = 'Relationship to Applicant';
+            if (empty($guardian['phone'])) $guardMissing[] = 'Guardian Phone';
+            if (empty($guardian['id_number'])) $guardMissing[] = 'Guardian National ID';
+        }
+        $guardComplete = ($guardian !== null) && empty($guardMissing);
+    } else {
+        // For adult applicants, if filled it is complete, but not strictly mandatory to block
+        $guardComplete = ($guardian !== null);
+    }
+
+    // Step 4: Bursary Application Request
+    $appStmt = $pdo->prepare("
+        SELECT a.*, p.name AS program_name, p.maximum_amount AS program_max
+        FROM applications a
+        LEFT JOIN programs p ON a.program_id = p.id
+        WHERE a.applicant_id = ?
+        ORDER BY a.id DESC LIMIT 1
+    ");
+    $appStmt->execute([$applicantId]);
+    $application = $appStmt->fetch() ?: null;
+
+    $appMissing = [];
+    if (!$application) {
+        $appMissing[] = 'Bursary Program Selection & Request Details';
+    } else {
+        if (empty($application['program_id'])) $appMissing[] = 'Bursary Program';
+        if (empty($application['requested_amount']) || (float)$application['requested_amount'] <= 0) $appMissing[] = 'Requested Amount';
+        if (empty($application['financial_need'])) $appMissing[] = 'Financial Need Description';
+        if (empty($application['reason_for_application'])) $appMissing[] = 'Reason for Application';
+    }
+    $appComplete = ($application !== null) && empty($appMissing);
+    $isSubmitted = $application && in_array($application['status'], ['submitted', 'pending', 'under_review', 'approved', 'rejected']);
+
+    // Step 5: Supporting Documents
+    $docStmt = $pdo->prepare("SELECT document_type, original_filename, status FROM documents WHERE applicant_id = ?");
+    $docStmt->execute([$applicantId]);
+    $docs = [];
+    while ($d = $docStmt->fetch()) {
+        $docs[$d['document_type']] = $d;
+    }
+
+    $mandatoryTypes = [
+        'passport_photo'  => 'Passport Photo',
+        'identification'  => 'National ID / Birth Certificate',
+        'fee_structure'   => 'Fee Structure / Statement',
+        'admission_proof' => 'Admission Letter / Student ID'
+    ];
+
+    $missingDocs = [];
+    foreach ($mandatoryTypes as $typeKey => $typeName) {
+        if (!isset($docs[$typeKey])) {
+            $missingDocs[$typeKey] = $typeName;
+        }
+    }
+    $docsUploadedCount = count($mandatoryTypes) - count($missingDocs);
+    $docsTotalRequired = count($mandatoryTypes);
+    $docsComplete = empty($missingDocs);
+
+    // Step 6: Review & Final Submit
+    $canSubmit = $personalComplete && $eduComplete && (!$isMinor || $guardComplete) && $appComplete && $docsComplete && !$isSubmitted;
+
+    $steps = [
+        'profile' => [
+            'step_num'    => 1,
+            'title'       => 'Personal',
+            'label'       => 'Personal Details',
+            'url'         => 'profile.php',
+            'completed'   => $personalComplete,
+            'missing'     => $personalMissing
+        ],
+        'education' => [
+            'step_num'    => 2,
+            'title'       => 'Education',
+            'label'       => 'Academic Info',
+            'url'         => 'education.php',
+            'completed'   => $eduComplete,
+            'missing'     => $eduMissing
+        ],
+        'guardian' => [
+            'step_num'    => 3,
+            'title'       => 'Guardian',
+            'label'       => 'Guardian Details',
+            'url'         => 'guardian.php',
+            'completed'   => $guardComplete,
+            'missing'     => $guardMissing,
+            'optional'    => !$isMinor
+        ],
+        'application' => [
+            'step_num'    => 4,
+            'title'       => 'Bursary Request',
+            'label'       => 'Bursary Form',
+            'url'         => 'application.php',
+            'completed'   => $appComplete,
+            'missing'     => $appMissing
+        ],
+        'documents' => [
+            'step_num'         => 5,
+            'title'            => 'Documents',
+            'label'            => 'Supporting Documents',
+            'url'              => 'documents.php',
+            'completed'        => $docsComplete,
+            'missing'          => array_values($missingDocs),
+            'missing_docs'     => $missingDocs,
+            'uploaded_count'   => $docsUploadedCount,
+            'total_required'   => $docsTotalRequired
+        ],
+        'review' => [
+            'step_num'    => 6,
+            'title'       => 'Review & Submit',
+            'label'       => 'Final Review',
+            'url'         => 'review.php',
+            'completed'   => $isSubmitted,
+            'can_submit'  => $canSubmit
+        ]
+    ];
+
+    // Find the next incomplete step
+    $nextStepKey = 'review';
+    $nextStepUrl = 'review.php';
+    $nextStepTitle = 'Review & Submit';
+
+    if ($isSubmitted) {
+        $nextStepKey = 'review';
+        $nextStepUrl = 'status.php';
+        $nextStepTitle = 'View Status';
+    } else {
+        foreach ($steps as $key => $sData) {
+            // For adult applicants who skipped guardian, don't force them back to guardian if they already filled bursary application
+            if ($key === 'guardian' && !$isMinor && !$sData['completed'] && $appComplete) {
+                continue;
+            }
+            if (!$sData['completed'] && $key !== 'review') {
+                $nextStepKey = $key;
+                $nextStepUrl = $sData['url'];
+                $nextStepTitle = $sData['title'];
+                break;
+            }
+        }
+    }
+
+    $completedCount = 0;
+    foreach ($steps as $k => $d) {
+        if ($d['completed']) {
+            $completedCount++;
+        }
+    }
+    $percentage = (int)round(($completedCount / count($steps)) * 100);
+
+    return [
+        'steps'             => $steps,
+        'applicant'         => $applicant,
+        'education'         => $education,
+        'guardian'          => $guardian,
+        'application'       => $application,
+        'docs'              => $docs,
+        'is_minor'          => $isMinor,
+        'is_submitted'      => $isSubmitted,
+        'can_submit'        => $canSubmit,
+        'next_step_key'     => $nextStepKey,
+        'next_step_url'     => $nextStepUrl,
+        'next_step_title'   => $nextStepTitle,
+        'percentage'        => $percentage,
+        'missing_docs'      => $missingDocs
+    ];
+}
+
+/**
+ * Render the HTML stepper wizard for the applicant portal.
+ */
+function renderApplicantWizardHtml(string $currentStepKey, array $stepsInfo): string {
+    $steps = $stepsInfo['steps'];
+    $currentStepNum = $steps[$currentStepKey]['step_num'] ?? 1;
+    $totalSteps = count($steps);
+
+    $html = '<div class="wizard-container mb-4 shadow-sm">';
+    
+    // Top summary row
+    $html .= '<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 px-1 gap-2">';
+    $html .= '<div class="small fw-bold text-dark d-flex align-items-center gap-2">';
+    $html .= '<span class="badge bg-success text-white px-2 py-1"><i class="bi bi-diagram-3-fill me-1"></i> Step ' . $currentStepNum . ' of ' . $totalSteps . '</span>';
+    $html .= '<span class="fs-6">' . e($steps[$currentStepKey]['label'] ?? $steps[$currentStepKey]['title']) . '</span>';
+    $html .= '</div>';
+    
+    $html .= '<div class="small fw-semibold text-muted d-flex align-items-center gap-2">';
+    $html .= '<span>Application Progress:</span>';
+    $html .= '<span class="badge ' . ($stepsInfo['percentage'] >= 100 ? 'bg-success' : 'bg-primary') . '">' . $stepsInfo['percentage'] . '% Completed</span>';
+    $html .= '</div>';
+    $html .= '</div>';
+
+    // Progress bar
+    $html .= '<div class="progress mb-3" style="height: 6px;">';
+    $html .= '<div class="progress-bar bg-success" role="progressbar" style="width: ' . $stepsInfo['percentage'] . '%;" aria-valuenow="' . $stepsInfo['percentage'] . '" aria-valuemin="0" aria-valuemax="100"></div>';
+    $html .= '</div>';
+
+    // Steps Navigation Circles
+    $html .= '<div class="steps-nav">';
+    foreach ($steps as $key => $s) {
+        $isActive = ($key === $currentStepKey);
+        $isCompleted = !empty($s['completed']);
+        $stepClass = $isActive ? 'active' : ($isCompleted ? 'completed' : 'pending');
+
+        $linkTag = 'div';
+        $linkAttr = '';
+        if ($isCompleted || $isActive) {
+            $linkTag = 'a';
+            $linkAttr = ' href="' . e($s['url']) . '" title="' . e($s['title']) . ' (Click to view/edit)" class="step-item ' . $stepClass . '"';
+        } else {
+            $linkAttr = ' class="step-item ' . $stepClass . '"';
+        }
+
+        $html .= "<{$linkTag}{$linkAttr}>";
+        $html .= '<div class="step-circle">';
+        if ($isCompleted) {
+            $html .= '<i class="bi bi-check-lg"></i>';
+        } else {
+            $html .= $s['step_num'];
+        }
+        $html .= '</div>';
+        $html .= '<span class="step-label d-none d-md-block">' . e($s['title']) . '</span>';
+        $html .= '<span class="step-label d-md-none">' . $s['step_num'] . '</span>';
+        $html .= "</{$linkTag}>";
+    }
+    $html .= '</div>';
+
+    // Step Status Notification bar if already completed
+    if (!empty($steps[$currentStepKey]['completed']) && $currentStepKey !== 'review') {
+        $html .= '<div class="mt-3 pt-2 border-top d-flex flex-wrap justify-content-between align-items-center small gap-2">';
+        $html .= '<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i> This section has been completed.</span>';
+        if (!empty($stepsInfo['next_step_url']) && $stepsInfo['next_step_key'] !== $currentStepKey) {
+            $html .= '<a href="' . e($stepsInfo['next_step_url']) . '" class="btn btn-sm btn-outline-success py-1 px-3 fw-semibold">Next Incomplete Step: ' . e($stepsInfo['next_step_title']) . ' <i class="bi bi-arrow-right ms-1"></i></a>';
+        }
+        $html .= '</div>';
+    }
+
+    $html .= '</div>';
+
+    return $html;
+}
+
 

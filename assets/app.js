@@ -88,5 +88,38 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    // Auto-submit inline document upload inputs
+    const autoUploadInputs = document.querySelectorAll('.auto-upload-input');
+    autoUploadInputs.forEach(function (input) {
+        input.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                const label = this.closest('label');
+                if (label) {
+                    label.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Uploading...';
+                    label.classList.add('disabled');
+                }
+                this.form.submit();
+            }
+        });
+    });
+
+    // Smart Form Validation & Smooth Auto-Focus on Missing Fields
+    const wizardForms = document.querySelectorAll('form');
+    wizardForms.forEach(function (form) {
+        form.addEventListener('invalid', function (e) {
+            e.preventDefault();
+            const target = e.target;
+            target.classList.add('is-invalid');
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.focus();
+
+            // Clear invalid on input
+            target.addEventListener('input', function () {
+                target.classList.remove('is-invalid');
+            }, { once: true });
+        }, true);
+    });
 });
+
 

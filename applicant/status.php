@@ -43,6 +43,8 @@ if ($currentApp) {
     }
 }
 
+$wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
+
 $pageTitle = 'Application Status';
 $activeNav = 'status';
 require_once __DIR__ . '/../includes/header.php';
@@ -97,12 +99,14 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                     <div class="card-body-custom">
                         <!-- Status Alert Box -->
                         <?php if ($currentApp['status'] === 'draft'): ?>
-                            <div class="alert alert-secondary d-flex align-items-center justify-content-between">
+                            <div class="alert alert-secondary d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
                                 <div>
                                     <i class="bi bi-pencil-square me-2"></i>
                                     <strong>Application in Draft:</strong> You have not submitted this application yet.
                                 </div>
-                                <a href="application.php" class="btn btn-sm btn-green">Complete & Submit</a>
+                                <a href="<?php echo e($wizardSteps['next_step_url']); ?>" class="btn btn-sm btn-green pulse-btn text-nowrap">
+                                    Continue Application (<?php echo e($wizardSteps['next_step_title']); ?>) <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
                             </div>
                         <?php elseif ($currentApp['status'] === 'submitted' || $currentApp['status'] === 'pending'): ?>
                             <div class="alert alert-info d-flex align-items-center">

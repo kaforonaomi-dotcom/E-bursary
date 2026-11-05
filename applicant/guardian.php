@@ -155,9 +155,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
 
-                setFlash('success', 'Parent / Guardian details saved successfully!');
-                header('Location: guardian.php');
-                exit;
+                $actionNext = $_POST['action_next'] ?? 'continue';
+                if ($actionNext === 'stay') {
+                    setFlash('success', 'Parent / Guardian details saved successfully!');
+                    header('Location: guardian.php');
+                    exit;
+                } else {
+                    setFlash('success', 'Parent / Guardian details saved successfully! Proceeding to Step 4: Bursary Application Request.');
+                    header('Location: application.php');
+                    exit;
+                }
 
             } catch (PDOException $e) {
                 $errors[] = 'Database error: ' . $e->getMessage();
@@ -165,6 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
 
 $pageTitle = 'Parent / Guardian Information';
 $activeNav = 'guardian';
@@ -190,6 +199,7 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
     <div class="content-body">
         <div class="container-fluid p-0" style="max-width: 950px;">
             <?php echo renderFlash(); ?>
+            <?php echo renderApplicantWizardHtml('guardian', $wizardSteps); ?>
 
             <?php if ($isMinor): ?>
                 <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
@@ -309,13 +319,23 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pt-3 border-top">
                             <a href="education.php" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i> Back to Education
                             </a>
-                            <button type="submit" class="btn btn-green px-4">
-                                <i class="bi bi-save-fill me-1"></i> Save Guardian Details
-                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <?php if (!$isMinor): ?>
+                                    <a href="application.php" class="btn btn-link text-muted text-decoration-none me-1">
+                                        Skip for Now <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <button type="submit" name="action_next" value="stay" class="btn btn-outline-secondary">
+                                    <i class="bi bi-save me-1"></i> Save Draft
+                                </button>
+                                <button type="submit" name="action_next" value="continue" class="btn btn-green px-4 pulse-btn">
+                                    Save & Continue to Bursary Request <i class="bi bi-arrow-right ms-1"></i>
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

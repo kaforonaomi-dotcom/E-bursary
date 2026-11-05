@@ -179,9 +179,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
 
-                setFlash('success', 'Education details saved successfully!');
-                header('Location: education.php');
-                exit;
+                $actionNext = $_POST['action_next'] ?? 'continue';
+                if ($actionNext === 'stay') {
+                    setFlash('success', 'Education details saved successfully!');
+                    header('Location: education.php');
+                    exit;
+                } else {
+                    setFlash('success', 'Education details saved successfully! Proceeding to Step 3: Parent / Guardian Details.');
+                    header('Location: guardian.php');
+                    exit;
+                }
 
             } catch (PDOException $e) {
                 $errors[] = 'Database error: ' . $e->getMessage();
@@ -191,6 +198,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $selectedLevel = $_POST['education_level'] ?? ($edu['education_level'] ?? 'university');
+
+$wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
 
 $pageTitle = 'Education Information';
 $activeNav = 'education';
@@ -216,6 +225,7 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
     <div class="content-body">
         <div class="container-fluid p-0" style="max-width: 950px;">
             <?php echo renderFlash(); ?>
+            <?php echo renderApplicantWizardHtml('education', $wizardSteps); ?>
 
             <?php if (!empty($errors)): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -392,13 +402,18 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pt-3 border-top">
                             <a href="profile.php" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Back to Profile
+                                <i class="bi bi-arrow-left me-1"></i> Back to Personal Info
                             </a>
-                            <button type="submit" class="btn btn-green px-4">
-                                <i class="bi bi-save-fill me-1"></i> Save Education Details
-                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="submit" name="action_next" value="stay" class="btn btn-outline-secondary">
+                                    <i class="bi bi-save me-1"></i> Save Draft
+                                </button>
+                                <button type="submit" name="action_next" value="continue" class="btn btn-green px-4 pulse-btn">
+                                    Save & Continue to Guardian <i class="bi bi-arrow-right ms-1"></i>
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

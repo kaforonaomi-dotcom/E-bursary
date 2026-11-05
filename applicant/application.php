@@ -147,12 +147,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isSubmitted) {
                     ]);
                 }
 
-                if (isset($_POST['save_and_review'])) {
-                    header('Location: review.php');
-                    exit;
-                } else {
+                $actionNext = $_POST['action_next'] ?? (isset($_POST['save_and_documents']) || isset($_POST['save_and_review']) ? 'continue' : 'stay');
+                if ($actionNext === 'stay' || isset($_POST['save_draft'])) {
                     setFlash('success', 'Bursary application details saved as draft.');
                     header('Location: application.php');
+                    exit;
+                } else {
+                    setFlash('success', 'Bursary application details saved! Proceeding to Step 5: Supporting Documents.');
+                    header('Location: documents.php');
                     exit;
                 }
 
@@ -162,6 +164,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isSubmitted) {
         }
     }
 }
+
+$wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
 
 $pageTitle = 'Bursary Application';
 $activeNav = 'application';
@@ -187,6 +191,7 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
     <div class="content-body">
         <div class="container-fluid p-0" style="max-width: 950px;">
             <?php echo renderFlash(); ?>
+            <?php echo renderApplicantWizardHtml('application', $wizardSteps); ?>
 
             <!-- Application Deadline Banner -->
             <?php if ($isSystemClosed): ?>
@@ -229,30 +234,6 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             <?php endif; ?>
-
-            <!-- Multi-step Wizard Indicator -->
-            <div class="steps-nav">
-                <div class="step-item completed">
-                    <div class="step-circle"><i class="bi bi-check-lg"></i></div>
-                    <span class="step-label">1. Personal</span>
-                </div>
-                <div class="step-item <?php echo $education ? 'completed' : ''; ?>">
-                    <div class="step-circle"><?php echo $education ? '<i class="bi bi-check-lg"></i>' : '2'; ?></div>
-                    <span class="step-label">2. Education</span>
-                </div>
-                <div class="step-item active">
-                    <div class="step-circle">3</div>
-                    <span class="step-label">3. Bursary Form</span>
-                </div>
-                <div class="step-item">
-                    <div class="step-circle">4</div>
-                    <span class="step-label">4. Documents</span>
-                </div>
-                <div class="step-item">
-                    <div class="step-circle">5</div>
-                    <span class="step-label">5. Review & Submit</span>
-                </div>
-            </div>
 
             <div class="card-custom">
                 <div class="card-header-custom">
@@ -312,13 +293,18 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                         </div>
 
                         <?php if (!$isSystemClosed && !empty($availablePrograms)): ?>
-                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                                <button type="submit" name="save_draft" class="btn btn-outline-secondary">
-                                    <i class="bi bi-save me-1"></i> Save as Draft
-                                </button>
-                                <button type="submit" name="save_and_review" class="btn btn-green px-4">
-                                    Continue to Review & Submit <i class="bi bi-arrow-right ms-1"></i>
-                                </button>
+                            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pt-3 border-top">
+                                <a href="guardian.php" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i> Back to Guardian Details
+                                </a>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" name="action_next" value="stay" class="btn btn-outline-secondary">
+                                        <i class="bi bi-save me-1"></i> Save as Draft
+                                    </button>
+                                    <button type="submit" name="action_next" value="continue" class="btn btn-green px-4 pulse-btn">
+                                        Save & Continue to Documents <i class="bi bi-arrow-right ms-1"></i>
+                                    </button>
+                                </div>
                             </div>
                         <?php endif; ?>
                     </form>

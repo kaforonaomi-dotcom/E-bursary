@@ -53,21 +53,10 @@ $notifStmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER 
 $notifStmt->execute([$userId]);
 $recentNotifications = $notifStmt->fetchAll();
 
-// Calculate completion progress
-$completedSteps = 1; // Profile created upon registration
-if (!empty($applicant['first_name']) && !empty($applicant['id_number']) && !empty($applicant['phone']) && !empty($applicant['county'])) {
-    $completedSteps++;
-}
-if ($education) {
-    $completedSteps++;
-}
-if ($guardian) {
-    $completedSteps++;
-}
-if ($uploadedDocsCount >= 3) {
-    $completedSteps++;
-}
-$progressPercent = min(100, round(($completedSteps / 5) * 100));
+// Calculate unified wizard progress
+$wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
+$progressPercent = $wizardSteps['percentage'];
+$isSubmitted = $wizardSteps['is_submitted'];
 
 $pageTitle = 'Applicant Dashboard';
 $activeNav = 'dashboard';
@@ -107,17 +96,17 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                     <p class="text-muted mb-0">Track your bursary application progress and manage your profile details.</p>
                 </div>
                 <div>
-                    <?php if (!$application): ?>
-                        <a href="application.php" class="btn btn-green">
-                            <i class="bi bi-plus-circle me-1"></i> Apply for Bursary
-                        </a>
-                    <?php elseif ($application['status'] === 'draft'): ?>
-                        <a href="review.php" class="btn btn-green">
-                            <i class="bi bi-send-check me-1"></i> Review & Submit Application
-                        </a>
-                    <?php else: ?>
+                    <?php if ($isSubmitted): ?>
                         <a href="status.php" class="btn btn-outline-green">
                             <i class="bi bi-clipboard-check me-1"></i> View Application Status
+                        </a>
+                    <?php elseif ($wizardSteps['can_submit']): ?>
+                        <a href="review.php" class="btn btn-green pulse-btn">
+                            <i class="bi bi-send-check me-1"></i> Review & Submit Application <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    <?php else: ?>
+                        <a href="<?php echo e($wizardSteps['next_step_url']); ?>" class="btn btn-green pulse-btn">
+                            <i class="bi bi-play-circle-fill me-1"></i> Continue Application: Step <?php echo $wizardSteps['steps'][$wizardSteps['next_step_key']]['step_num']; ?> (<?php echo e($wizardSteps['next_step_title']); ?>) <i class="bi bi-arrow-right ms-1"></i>
                         </a>
                     <?php endif; ?>
                 </div>
@@ -174,19 +163,25 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                 </div>
             </div>
 
-            <!-- APPLICATION READINESS PROGRESS -->
-            <div class="card-custom mb-4">
-                <div class="card-body-custom">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold text-dark"><i class="bi bi-list-check text-success me-2"></i>Application Profile Completion</span>
-                        <span class="fw-bold text-success"><?php echo $progressPercent; ?>%</span>
-                    </div>
-                    <div class="progress" style="height: 10px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $progressPercent; ?>%;" aria-valuenow="<?php echo $progressPercent; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <small class="text-muted d-block mt-2">Complete all profile sections, academic records, and document uploads to qualify for consideration.</small>
+            <!-- APPLICATION READINESS PROGRESS WIZARD -->
+            <?php if (!$isSubmitted): ?>
+                <div class="mb-4">
+                    <?php echo renderApplicantWizardHtml($wizardSteps['next_step_key'], $wizardSteps); ?>
                 </div>
-            </div>
+            <?php else: ?>
+                <div class="card-custom mb-4">
+                    <div class="card-body-custom">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark"><i class="bi bi-check-circle-fill text-success me-2"></i>Application Submitted</span>
+                            <span class="badge bg-success">100% Completed</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 100%;"></div>
+                        </div>
+                        <small class="text-muted d-block mt-2">Your application has been submitted and is currently being processed by the bursary committee.</small>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <!-- QUICK NAVIGATION TILES -->
             <div class="row g-3 mb-4">

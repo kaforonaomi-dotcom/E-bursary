@@ -146,6 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
+
 $pageTitle = 'Review & Final Submit';
 $activeNav = 'application';
 require_once __DIR__ . '/../includes/header.php';
@@ -170,6 +172,7 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
     <div class="content-body">
         <div class="container-fluid p-0" style="max-width: 950px;">
             <?php echo renderFlash(); ?>
+            <?php echo renderApplicantWizardHtml('review', $wizardSteps); ?>
 
             <?php if (!empty($errors)): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -194,30 +197,6 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                     </ul>
                 </div>
             <?php endif; ?>
-
-            <!-- Multi-step Wizard Indicator -->
-            <div class="steps-nav">
-                <div class="step-item completed">
-                    <div class="step-circle"><i class="bi bi-check-lg"></i></div>
-                    <span class="step-label">1. Personal</span>
-                </div>
-                <div class="step-item completed">
-                    <div class="step-circle"><i class="bi bi-check-lg"></i></div>
-                    <span class="step-label">2. Education</span>
-                </div>
-                <div class="step-item completed">
-                    <div class="step-circle"><i class="bi bi-check-lg"></i></div>
-                    <span class="step-label">3. Bursary Form</span>
-                </div>
-                <div class="step-item completed">
-                    <div class="step-circle"><i class="bi bi-check-lg"></i></div>
-                    <span class="step-label">4. Documents</span>
-                </div>
-                <div class="step-item active">
-                    <div class="step-circle">5</div>
-                    <span class="step-label">5. Review & Submit</span>
-                </div>
-            </div>
 
             <div class="card-custom">
                 <div class="card-header-custom">
@@ -328,11 +307,11 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                             </label>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center">
-                            <a href="application.php" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Back to Application Form
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+                            <a href="documents.php" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> Back to Documents
                             </a>
-                            <button type="submit" class="btn btn-green px-4 py-2 fs-6" <?php echo !$canSubmit ? 'disabled' : ''; ?> data-confirm="Are you sure you want to submit your bursary application? Once submitted, you cannot edit your details.">
+                            <button type="submit" class="btn btn-green px-4 py-2 fs-6 <?php echo $canSubmit ? 'pulse-btn' : ''; ?>" <?php echo !$canSubmit ? 'disabled' : ''; ?> data-confirm="Are you sure you want to submit your bursary application? Once submitted, you cannot edit your details.">
                                 <i class="bi bi-send-check-fill me-2"></i> Submit Application Now
                             </button>
                         </div>

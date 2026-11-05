@@ -147,9 +147,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_doc'])) {
                         ]);
                     }
 
-                    setFlash('success', $config['title'] . ' uploaded successfully!');
-                    header('Location: documents.php');
-                    exit;
+                    // Check mandatory documents uploaded so far
+                    $chkStmt = $pdo->prepare("SELECT document_type FROM documents WHERE applicant_id = ?");
+                    $chkStmt->execute([$applicant['id']]);
+                    $currDocs = $chkStmt->fetchAll(PDO::FETCH_COLUMN);
+                    $reqDocs = ['passport_photo', 'identification', 'fee_structure', 'admission_proof'];
+                    $remainingReq = array_diff($reqDocs, $currDocs);
+
+                    if (empty($remainingReq)) {
+                        setFlash('success', "🎉 '{$config['title']}' uploaded successfully! All required documents are now completed. You can now proceed to review and submit!");
+                        header('Location: documents.php?all_ready=1');
+                        exit;
+                    } else {
+                        $readableMap = [
+                            'passport_photo'  => 'Passport Photo',
+                            'identification'  => 'National ID / Birth Cert',
+                            'fee_structure'   => 'Fee Structure',
+                            'admission_proof' => 'Admission Letter / Student ID'
+                        ];
+                        $remNames = array_map(function($k) use ($readableMap) { return $readableMap[$k] ?? $k; }, $remainingReq);
+                        setFlash('success', "'{$config['title']}' uploaded successfully! " . count($remainingReq) . " remaining required document(s): " . implode(', ', $remNames) . ".");
+                        header('Location: documents.php');
+                        exit;
+                    }
 
                 } catch (PDOException $e) {
                     $errors[] = 'Database error: ' . $e->getMessage();
@@ -166,6 +186,12 @@ $uploadedDocs = [];
 while ($row = $docStmt->fetch()) {
     $uploadedDocs[$row['document_type']] = $row;
 }
+
+$wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
+$missingDocs = $wizardSteps['missing_docs'];
+$uploadedMandatoryCount = $wizardSteps['steps']['documents']['uploaded_count'];
+$totalMandatoryCount = $wizardSteps['steps']['documents']['total_required'];
+$isAllMandatoryUploaded = ($uploadedMandatoryCount >= $totalMandatoryCount);
 
 $pageTitle = 'Supporting Documents';
 $activeNav = 'documents';
@@ -191,6 +217,45 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
     <div class="content-body">
         <div class="container-fluid p-0" style="max-width: 1050px;">
             <?php echo renderFlash(); ?>
+            <?php echo renderApplicantWizardHtml('documents', $wizardSteps); ?>
+
+            <!-- Document Upload Progress Banner -->
+            <?php if ($isAllMandatoryUploaded): ?>
+                <div class="alert alert-success d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 shadow-sm">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill fs-2 me-3 text-success"></i>
+                        <div>
+                            <h6 class="alert-heading fw-bold mb-1">All Mandatory Documents Uploaded (<?php echo $totalMandatoryCount; ?> of <?php echo $totalMandatoryCount; ?>)</h6>
+                            <span class="small">All required documents are present. You can immediately move to the final review and submit your application!</span>
+                        </div>
+                    </div>
+                    <a href="review.php" class="btn btn-green btn-lg px-4 text-nowrap pulse-btn shadow-sm">
+                        Continue to Review & Submit <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="alert alert-warning d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 shadow-sm">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-exclamation-triangle-fill fs-3 me-3 text-warning"></i>
+                        <div>
+                            <h6 class="alert-heading fw-bold mb-1">
+                                Upload Progress: <?php echo $uploadedMandatoryCount; ?> of <?php echo $totalMandatoryCount; ?> Required Documents Uploaded
+                            </h6>
+                            <div class="small text-muted mb-2">To proceed to review and final submission, please upload the following remaining required documents:</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <?php foreach ($missingDocs as $mKey => $mTitle): ?>
+                                    <span class="badge bg-danger text-white py-1 px-2">
+                                        <i class="bi bi-upload me-1"></i> <?php echo e($mTitle); ?> Missing
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-md-end">
+                        <span class="badge bg-secondary fs-6 px-3 py-2"><?php echo round(($uploadedMandatoryCount / $totalMandatoryCount) * 100); ?>% Completed</span>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <?php if (!empty($errors)): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -257,7 +322,13 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php echo renderStatusBadge($status); ?>
+                                            <?php if ($uploaded): ?>
+                                                <?php echo renderStatusBadge($status); ?>
+                                            <?php elseif ($meta['required']): ?>
+                                                <span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i> Required</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-secondary">Optional</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <?php if ($uploaded && !empty($uploaded['admin_comment'])): ?>
@@ -267,10 +338,20 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <!-- Upload/Replace Modal Trigger -->
-                                            <button type="button" class="btn btn-sm <?php echo $uploaded ? 'btn-outline-secondary' : 'btn-green'; ?>" data-bs-toggle="modal" data-bs-target="#uploadModal-<?php echo e($key); ?>">
-                                                <i class="bi bi-cloud-arrow-up me-1"></i> <?php echo $uploaded ? 'Replace' : 'Upload'; ?>
-                                            </button>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <form action="documents.php" method="POST" enctype="multipart/form-data" class="d-inline-block m-0">
+                                                    <?php echo csrfInput(); ?>
+                                                    <input type="hidden" name="upload_doc" value="1">
+                                                    <input type="hidden" name="document_type" value="<?php echo e($key); ?>">
+                                                    <label class="btn btn-sm <?php echo $uploaded ? 'btn-outline-secondary' : 'btn-green'; ?> mb-0 text-nowrap cursor-pointer">
+                                                        <i class="bi <?php echo $uploaded ? 'bi-arrow-repeat' : 'bi-cloud-arrow-up'; ?> me-1"></i> <?php echo $uploaded ? 'Replace' : 'Upload File'; ?>
+                                                        <input type="file" name="document_file" class="d-none auto-upload-input" accept=".<?php echo implode(', .', $meta['allowed']); ?>">
+                                                    </label>
+                                                </form>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#uploadModal-<?php echo e($key); ?>" title="Upload through dialog">
+                                                    <i class="bi bi-window-stack"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
 
@@ -313,13 +394,22 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                         </table>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-4">
-                        <a href="guardian.php" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-1"></i> Back to Guardian
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pt-3 border-top mt-4">
+                        <a href="application.php" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Bursary Request
                         </a>
-                        <a href="application.php" class="btn btn-green px-4">
-                            Continue to Bursary Application <i class="bi bi-arrow-right ms-1"></i>
-                        </a>
+                        <div>
+                            <?php if ($isAllMandatoryUploaded): ?>
+                                <a href="review.php" class="btn btn-green btn-lg px-4 pulse-btn shadow-sm">
+                                    <i class="bi bi-check2-circle me-1"></i> Continue to Review & Submit <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            <?php else: ?>
+                                <button type="button" class="btn btn-secondary btn-lg px-4" disabled title="Upload all required documents first">
+                                    <i class="bi bi-lock me-1"></i> Continue to Review & Submit
+                                </button>
+                                <div class="small text-danger text-center text-sm-end mt-1">Please upload the missing mandatory documents above to proceed</div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>

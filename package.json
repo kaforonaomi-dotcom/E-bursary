@@ -1,0 +1,21 @@
+{
+  "name": "e-bursary",
+  "version": "1.0.0",
+  "description": "A web-based Electronic Bursary Management System built with PHP, MySQL/MariaDB, Apache/XAMPP, Bootstrap 5, HTML, CSS, and JavaScript. Designed following official County and Government bursary management standards with a green and white visual identity.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaforonaomi-dotcom/E-bursary.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kaforonaomi-dotcom/E-bursary/issues"
+  },
+  "homepage": "https://github.com/kaforonaomi-dotcom/E-bursary#readme"
+}
