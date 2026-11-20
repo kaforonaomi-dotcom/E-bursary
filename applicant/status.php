@@ -31,6 +31,12 @@ $currentApp = $applications[0] ?? null;
 // If current application is approved, fetch allocation details
 $allocation = null;
 $disbursements = [];
+$education = null;
+
+$eduStmt = $pdo->prepare("SELECT * FROM education WHERE applicant_id = ? LIMIT 1");
+$eduStmt->execute([$applicant['id']]);
+$education = $eduStmt->fetch();
+
 if ($currentApp) {
     $allocStmt = $pdo->prepare("SELECT * FROM allocations WHERE application_id = ? LIMIT 1");
     $allocStmt->execute([$currentApp['id']]);
@@ -226,9 +232,11 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
 
                     <!-- DISBURSEMENT TRACKING -->
                     <div class="card-custom">
-                        <div class="card-header-custom">
-                            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-credit-card-2-front me-2"></i>Disbursement Records</h5>
-                            <small class="text-muted">Payment status to institution / bank</small>
+                        <div class="card-header-custom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-credit-card-2-front me-2"></i>Disbursement Records</h5>
+                                <small class="text-muted">Payment status directly remitted to school institution or student account</small>
+                            </div>
                         </div>
                         <div class="card-body-custom">
                             <?php if (empty($disbursements)): ?>
@@ -238,22 +246,81 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                                 </div>
                             <?php else: ?>
                                 <div class="table-responsive">
-                                    <table class="table table-custom">
+                                    <table class="table table-custom align-middle">
                                         <thead>
                                             <tr>
                                                 <th>Disbursement Date</th>
                                                 <th>Amount</th>
-                                                <th>Method</th>
+                                                <th>Disbursement Destination & Account</th>
+                                                <th>Payment Method</th>
                                                 <th>Payment Ref / Cheque No</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($disbursements as $disb): ?>
+                                            <?php foreach ($disbursements as $disb):
+                                                $edLevel = $education['education_level'] ?? 'university';
+                                                $isSchool = ($edLevel === 'primary' || $edLevel === 'high_school');
+                                                $instName = $education['institution_name'] ?? 'School/Institution';
+                                                $admNum = $education['admission_number'] ?: ($education['registration_number'] ?: 'N/A');
+                                            ?>
                                                 <tr>
                                                     <td><?php echo $disb['disbursement_date'] ? date('d M Y', strtotime($disb['disbursement_date'])) : 'Pending'; ?></td>
-                                                    <td class="fw-bold text-success"><?php echo formatMoney((float)$disb['amount']); ?></td>
-                                                    <td><?php echo e($disb['payment_method'] ?? 'Bank Transfer'); ?></td>
+                                                    <td class="fw-bold text-success fs-6"><?php echo formatMoney((float)$disb['amount']); ?></td>
+                                                    <td>
+                                                        <?php if ($isSchool): ?>
+                                                            <!-- Primary & High School -> Direct Institution Account -->
+                                                            <div class="d-inline-flex align-items-center gap-1 text-primary fw-bold small">
+                                                                <i class="bi bi-building-check"></i> Direct Institution Account
+                                                            </div>
+                                                            <div class="fw-semibold text-dark small mt-1">
+                                                                <i class="bi bi-mortarboard me-1 text-muted"></i><?php echo e($instName); ?>
+                                                            </div>
+                                                            <div class="text-muted small">
+                                                                Student Adm No: <span class="fw-semibold text-dark"><?php echo e($admNum); ?></span>
+                                                            </div>
+                                                            <?php if (!empty($disb['recipient_account'])): ?>
+                                                                <div class="text-muted small font-monospace mt-1">
+                                                                    <i class="bi bi-bank me-1 text-primary"></i><?php echo e($disb['recipient_account']); ?>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        <?php else: ?>
+                                                            <!-- University: Can be Tuition Account or Direct Student -->
+                                                            <?php if (($disb['recipient_type'] ?? '') === 'student'): ?>
+                                                                <div class="d-inline-flex align-items-center gap-1 text-success fw-bold small">
+                                                                    <i class="bi bi-person-check-fill"></i> Direct Student Disbursement
+                                                                </div>
+                                                                <div class="text-muted small mt-1">
+                                                                    Channel: <span class="fw-semibold text-dark"><?php echo e($disb['payment_method']); ?></span>
+                                                                </div>
+                                                                <?php if (!empty($disb['recipient_account'])): ?>
+                                                                    <div class="text-dark small font-monospace fw-semibold mt-1">
+                                                                        <i class="bi bi-phone me-1 text-success"></i><?php echo e($disb['recipient_account']); ?>
+                                                                    </div>
+                                                                <?php endif; ?>
+                                                            <?php else: ?>
+                                                                <div class="d-inline-flex align-items-center gap-1 text-primary fw-bold small">
+                                                                    <i class="bi bi-building"></i> University Tuition Account
+                                                                </div>
+                                                                <div class="fw-semibold text-dark small mt-1">
+                                                                    <i class="bi bi-mortarboard me-1 text-muted"></i><?php echo e($instName); ?>
+                                                                </div>
+                                                                <div class="text-muted small">
+                                                                    Student Reg No: <span class="fw-semibold text-dark"><?php echo e($admNum); ?></span>
+                                                                </div>
+                                                                <?php if (!empty($disb['recipient_account'])): ?>
+                                                                    <div class="text-muted small font-monospace mt-1">
+                                                                        <i class="bi bi-bank me-1 text-primary"></i><?php echo e($disb['recipient_account']); ?>
+                                                                    </div>
+                                                                <?php endif; ?>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-light text-dark border">
+                                                            <?php echo e($disb['payment_method'] ?? 'Direct Institution Account'); ?>
+                                                        </span>
+                                                    </td>
                                                     <td><code><?php echo e($disb['payment_reference'] ?? 'Pending'); ?></code></td>
                                                     <td><?php echo renderStatusBadge($disb['status']); ?></td>
                                                 </tr>

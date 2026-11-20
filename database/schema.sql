@@ -353,6 +353,10 @@ CREATE TABLE IF NOT EXISTS disbursements (
 
     payment_method VARCHAR(100) NULL,
 
+    recipient_type ENUM('institution', 'student') DEFAULT 'institution',
+
+    recipient_account VARCHAR(255) NULL,
+
     status ENUM(
         'pending',
         'processing',
