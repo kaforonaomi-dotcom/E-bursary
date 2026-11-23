@@ -197,7 +197,7 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                 </div>
             <?php endif; ?>
 
-            <!-- CATEGORY BURSARY FUND ACCOUNTS & DEDUCTIONS LEDGER -->
+            <!-- CATEGORY BURSARY FUND ACCOUNTS & ALLOCATIONS -->
             <?php echo renderCategoryFundCards($fundStats); ?>
 
             <div class="card-custom">

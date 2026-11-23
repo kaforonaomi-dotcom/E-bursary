@@ -84,7 +84,7 @@ $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isSubmitted) {
     if ($isSystemClosed) {
-        $errors[] = 'The application window is currently closed. New applications or updates cannot be saved.';
+        $errors[] = 'The application is currently closed.';
     } elseif (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid security token. Please try again.';
     } else {
@@ -218,10 +218,10 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
             <!-- Application Deadline Banner -->
             <?php if ($isSystemClosed): ?>
                 <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
-                    <i class="bi bi-exclamation-octagon-fill fs-3 me-3"></i>
+                    <i class="bi bi-exclamation-octagon-fill fs-3 me-3 text-danger"></i>
                     <div>
-                        <h6 class="alert-heading fw-bold mb-1">Application Period Closed</h6>
-                        <span>The bursary application period is currently closed. New applications or modifications are not permitted at this time.</span>
+                        <h6 class="alert-heading fw-bold mb-1">Application Closed</h6>
+                        <span class="fs-6">The application is currently closed.</span>
                         <?php if (!empty($sysDeadline)): ?>
                             <div class="small fw-semibold mt-1">Closing Date was: <?php echo date('F d, Y', strtotime($sysDeadline)); ?></div>
                         <?php endif; ?>
@@ -337,6 +337,15 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                                         Save & Continue to Documents <i class="bi bi-arrow-right ms-1"></i>
                                     </button>
                                 </div>
+                            </div>
+                        <?php elseif ($isSystemClosed): ?>
+                            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pt-3 border-top">
+                                <a href="guardian.php" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i> Back to Guardian Details
+                                </a>
+                                <button type="button" class="btn btn-secondary" disabled>
+                                    <i class="bi bi-lock-fill me-1"></i> The application is currently closed
+                                </button>
                             </div>
                         <?php endif; ?>
                     </form>

@@ -29,8 +29,8 @@ if (isset($pdo) && isset($_SESSION['user_id'])) {
     <!-- Bootstrap Icons -->
     <link href="<?php echo $basePath; ?>assets/css/bootstrap-icons.min.css" rel="stylesheet">
 
-    <!-- Custom Theme CSS -->
-    <link rel="stylesheet" href="<?php echo $basePath; ?>assets/style.css">
+    <!-- Custom Theme CSS with Cache Buster -->
+    <link rel="stylesheet" href="<?php echo $basePath; ?>assets/style.css?v=<?php echo file_exists(__DIR__ . '/../assets/style.css') ? filemtime(__DIR__ . '/../assets/style.css') : time(); ?>">
 </head>
 <body>
 <div class="d-flex">

@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS education (
         FOREIGN KEY (applicant_id)
         REFERENCES applicants(id)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -162,6 +163,7 @@ CREATE TABLE IF NOT EXISTS guardians (
         FOREIGN KEY (applicant_id)
         REFERENCES applicants(id)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -239,7 +241,8 @@ CREATE TABLE IF NOT EXISTS applications (
     CONSTRAINT fk_application_applicant
         FOREIGN KEY (applicant_id)
         REFERENCES applicants(id)
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
 
     CONSTRAINT fk_application_program
         FOREIGN KEY (program_id)
@@ -292,7 +295,8 @@ CREATE TABLE IF NOT EXISTS documents (
     CONSTRAINT fk_document_applicant
         FOREIGN KEY (applicant_id)
         REFERENCES applicants(id)
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
 
     CONSTRAINT fk_document_application
         FOREIGN KEY (application_id)

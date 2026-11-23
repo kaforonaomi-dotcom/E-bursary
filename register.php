@@ -15,6 +15,10 @@ if (isset($_SESSION['user_id'])) {
 }
 
 $errors = [];
+$sysAppStatus = getSetting($pdo, 'application_status', 'open');
+$sysDeadline  = getSetting($pdo, 'application_deadline', '');
+$isSystemClosed = ($sysAppStatus === 'closed') || (!empty($sysDeadline) && strtotime($sysDeadline) < strtotime(date('Y-m-d')));
+
 $formData = [
     'first_name' => '',
     'last_name'  => '',
@@ -106,14 +110,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $newUserId = (int)$pdo->lastInsertId();
 
-                // Insert into applicants
+                // Insert into applicants (explicitly setting id = user_id so they always match)
                 $applicantInsert = $pdo->prepare("
                     INSERT INTO applicants (
-                        user_id, first_name, last_name, id_number,
+                        id, user_id, first_name, last_name, id_number,
                         date_of_birth, gender, phone, email, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ");
                 $applicantInsert->execute([
+                    $newUserId,
                     $newUserId,
                     $formData['first_name'],
                     $formData['last_name'],
@@ -200,6 +205,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2 class="fw-bold text-dark mb-1">Applicant Registration</h2>
             <p class="text-muted">Create your student account to apply for bursary support</p>
         </div>
+
+        <?php if ($isSystemClosed): ?>
+            <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+                <div>
+                    <strong>Notice:</strong> The application is currently closed. You may still register and complete your profile for upcoming intakes.
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($errors)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">

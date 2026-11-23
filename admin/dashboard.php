@@ -112,7 +112,7 @@ require_once __DIR__ . '/../includes/admin-sidebar.php';
                 </div>
             </div>
 
-            <!-- BURSARY ACCOUNT FUNDS & DEDUCTIONS BALANCE SECTION -->
+            <!-- BURSARY ACCOUNT FUNDS & ALLOCATIONS BALANCE SECTION -->
             <?php echo renderCategoryFundCards($fundStats); ?>
 
             <!-- QUICK ACTIONS -->

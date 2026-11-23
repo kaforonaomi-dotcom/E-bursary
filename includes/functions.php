@@ -380,8 +380,13 @@ function getApplicantStepsStatus(PDO $pdo, int $applicantId, ?array $applicant =
     $docsTotalRequired = count($mandatoryTypes);
     $docsComplete = empty($missingDocs);
 
+    // System application intake status
+    $sysAppStatus = getSetting($pdo, 'application_status', 'open');
+    $sysDeadline  = getSetting($pdo, 'application_deadline', '');
+    $isSystemClosed = ($sysAppStatus === 'closed') || (!empty($sysDeadline) && strtotime($sysDeadline) < strtotime(date('Y-m-d')));
+
     // Step 6: Review & Final Submit
-    $canSubmit = $personalComplete && $eduComplete && (!$isMinor || $guardComplete) && $appComplete && $docsComplete && !$isSubmitted;
+    $canSubmit = $personalComplete && $eduComplete && (!$isMinor || $guardComplete) && $appComplete && $docsComplete && !$isSubmitted && !$isSystemClosed;
 
     $steps = [
         'profile' => [
@@ -484,7 +489,9 @@ function getApplicantStepsStatus(PDO $pdo, int $applicantId, ?array $applicant =
         'next_step_url'     => $nextStepUrl,
         'next_step_title'   => $nextStepTitle,
         'percentage'        => $percentage,
-        'missing_docs'      => $missingDocs
+        'missing_docs'      => $missingDocs,
+        'is_system_closed'  => $isSystemClosed,
+        'system_deadline'   => $sysDeadline
     ];
 }
 
@@ -632,7 +639,7 @@ function getCategoryFundStats(PDO $pdo): array {
                        COUNT(DISTINCT a.id) AS approved_count
                 FROM allocations al
                 JOIN applications a ON al.application_id = a.id
-                WHERE a.program_id = ? AND al.status != 'pending'
+                WHERE a.program_id = ?
             ");
             $allocStmt->execute([$progId]);
             $allocRow = $allocStmt->fetch();
@@ -665,7 +672,7 @@ function getCategoryFundStats(PDO $pdo): array {
                 FROM allocations al
                 JOIN applications a ON al.application_id = a.id
                 JOIN programs p ON a.program_id = p.id
-                WHERE p.education_level = ? AND al.status != 'pending'
+                WHERE p.education_level = ?
             ");
             $allocStmt->execute([$level]);
             $allocRow = $allocStmt->fetch();
@@ -682,7 +689,6 @@ function getCategoryFundStats(PDO $pdo): array {
         $grandBudget += $initialBudget;
         $grandGivenOut += $givenOut;
         $grandDisbursed += $disbursed;
-        $grandRemaining += $remaining;
 
         $categoryStats[$level] = [
             'level'                  => $level,
@@ -693,6 +699,7 @@ function getCategoryFundStats(PDO $pdo): array {
             'icon'                   => $cat['icon'],
             'initial_budget'         => $initialBudget,
             'given_out'              => $givenOut,
+            'allocated'              => $givenOut,
             'disbursed'              => $disbursed,
             'undisbursed'            => max(0.00, $givenOut - $disbursed),
             'remaining'              => $remaining,
@@ -701,16 +708,22 @@ function getCategoryFundStats(PDO $pdo): array {
             'is_closed_by_threshold' => $isClosedByThreshold,
             'is_closed'              => $isClosed,
             'status'                 => $isClosedByThreshold ? 'closed_low_funds' : $progStatus,
+            'open_date'              => $prog ? $prog['application_open_date'] : null,
+            'close_date'             => $prog ? $prog['application_close_date'] : null,
             'approved_count'         => $approvedCount,
             'pending_count'          => $pendingCount,
             'percentage_used'        => $percentageUsed
         ];
     }
 
+    // Ensure Total Remaining Balance is strictly calculated as Total Budget minus Total Funds Allocated
+    $grandRemaining = max(0.00, $grandBudget - $grandGivenOut);
+
     return [
         'categories'       => $categoryStats,
         'grand_budget'     => $grandBudget,
         'grand_given_out'  => $grandGivenOut,
+        'grand_allocated'  => $grandGivenOut,
         'grand_disbursed'  => $grandDisbursed,
         'grand_remaining'  => $grandRemaining,
         'grand_percentage' => ($grandBudget > 0) ? min(100.0, round(($grandGivenOut / $grandBudget) * 100, 1)) : 0.0,
@@ -747,7 +760,7 @@ function checkProgramFundEligibility(PDO $pdo, int $programId): array {
         SELECT COALESCE(SUM(al.approved_amount), 0)
         FROM allocations al
         JOIN applications a ON al.application_id = a.id
-        WHERE a.program_id = ? AND al.status != 'pending'
+        WHERE a.program_id = ?
     ");
     $allocStmt->execute([$programId]);
     $givenOut = (float)$allocStmt->fetchColumn();
@@ -840,7 +853,7 @@ function renderCategoryFundCards(array $fundStats, string $context = 'admin'): s
 
         if ($context === 'admin') {
             $html .= '          <div class="bursary-admin-meta">';
-            $html .= '            <span>Budget: ' . e($initialFormatted) . ' • Deductions: ' . e($deductedFormatted) . '</span>';
+            $html .= '            <span>Budget: ' . e($initialFormatted) . ' • Allocated: ' . e($deductedFormatted) . '</span>';
             if ($isClosed) {
                 $html .= '            <span class="text-danger small fw-semibold">Threshold Reached</span>';
             } else {
@@ -855,6 +868,14 @@ function renderCategoryFundCards(array $fundStats, string $context = 'admin'): s
             } else {
                 $html .= '            <span class="text-success small fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Open</span>';
             }
+            $html .= '          </div>';
+        }
+
+        // Closing Date Badge
+        if (!empty($cat['close_date'])) {
+            $html .= '          <div class="bursary-deadline-badge">';
+            $html .= '            <i class="bi bi-calendar-event text-success"></i>';
+            $html .= '            <span>Closing Date: <strong>' . date('M d, Y', strtotime($cat['close_date'])) . '</strong></span>';
             $html .= '          </div>';
         }
 
@@ -891,14 +912,26 @@ function renderCategoryFundCards(array $fundStats, string $context = 'admin'): s
 
     $html .= '  </div>'; // end row
 
-    // Subtle Admin Account Financials Footer (clean, single horizontal bar)
+    // Admin Account Financials Footer (Visible, high-contrast metrics in white & green theme)
     if ($context === 'admin') {
         $html .= '  <div class="bursary-showcase-footer">';
-        $html .= '    <div class="d-flex flex-wrap justify-content-between align-items-center small gap-2 text-muted">';
-        $html .= '      <span><strong>Total Office Budget:</strong> Ksh ' . number_format($grandBudget) . '</span>';
-        $html .= '      <span><strong>Total Deductions:</strong> <span class="text-danger fw-semibold">- Ksh ' . number_format($grandGivenOut) . '</span></span>';
-        $html .= '      <span><strong>Net Remaining Balance:</strong> <span class="text-success fw-bold">Ksh ' . number_format($grandRemaining) . '</span></span>';
-        $html .= '      <span><i class="bi bi-shield-lock-fill text-warning me-1"></i><strong>Closing Threshold:</strong> Ksh ' . number_format($threshold) . '</span>';
+        $html .= '    <div class="row g-3 align-items-center text-center text-md-start">';
+        $html .= '      <div class="col-6 col-md-3 stat-item">';
+        $html .= '        <div class="stat-label">Total Office Budget</div>';
+        $html .= '        <div class="stat-val text-dark">Ksh ' . number_format($grandBudget) . '</div>';
+        $html .= '      </div>';
+        $html .= '      <div class="col-6 col-md-3 stat-item">';
+        $html .= '        <div class="stat-label">Total Funds Allocated</div>';
+        $html .= '        <div class="stat-val text-danger">Ksh ' . number_format($grandGivenOut) . '</div>';
+        $html .= '      </div>';
+        $html .= '      <div class="col-6 col-md-3 stat-item">';
+        $html .= '        <div class="stat-label">Total Remaining Balance</div>';
+        $html .= '        <div class="stat-val text-success">Ksh ' . number_format($grandRemaining) . '</div>';
+        $html .= '      </div>';
+        $html .= '      <div class="col-6 col-md-3 stat-item">';
+        $html .= '        <div class="stat-label"><i class="bi bi-shield-lock-fill text-warning me-1"></i>Closing Threshold</div>';
+        $html .= '        <div class="stat-val text-muted" style="font-size: 1rem;">Ksh ' . number_format($threshold) . '</div>';
+        $html .= '      </div>';
         $html .= '    </div>';
         $html .= '  </div>';
     }

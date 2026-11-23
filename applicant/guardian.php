@@ -201,6 +201,19 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
             <?php echo renderFlash(); ?>
             <?php echo renderApplicantWizardHtml('guardian', $wizardSteps); ?>
 
+            <?php if (!empty($wizardSteps['is_system_closed'])): ?>
+                <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                    <i class="bi bi-exclamation-octagon-fill fs-3 me-3 text-danger"></i>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-1">Application Closed</h6>
+                        <span class="fs-6">The application is currently closed.</span>
+                        <?php if (!empty($wizardSteps['system_deadline'])): ?>
+                            <div class="small fw-semibold mt-1">Closing Date was: <?php echo date('F d, Y', strtotime($wizardSteps['system_deadline'])); ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <?php if ($isMinor): ?>
                 <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
                     <i class="bi bi-info-circle-fill fs-4 me-3"></i>

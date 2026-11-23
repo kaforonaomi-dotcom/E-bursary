@@ -73,7 +73,7 @@ try {
             'maximum_amount'  => 15000.00,
             'total_budget'    => 2000000.00,
             'open_date'       => date('Y-m-d'),
-            'close_date'      => date('Y-m-d', strtotime('+90 days')),
+            'close_date'      => date('Y-m-d', strtotime('+45 days')), // Same closing date as High School
             'status'          => 'active'
         ]
     ];
@@ -183,15 +183,15 @@ try {
     } else {
         $insProf = $pdo->prepare("
             INSERT INTO applicants (
-                user_id, first_name, middle_name, last_name, id_number,
+                id, user_id, first_name, middle_name, last_name, id_number,
                 date_of_birth, gender, phone, email, county, sub_county, ward, physical_address, created_at
             ) VALUES (
-                ?, 'Brian', 'Kariuki', 'Mwangi', '38920145',
+                ?, ?, 'Brian', 'Kariuki', 'Mwangi', '38920145',
                 '2003-08-14', 'Male', '0712345678', ?, 'Nairobi', 'Westlands', 'Parklands', 'Highridge, Estate Road House #14', NOW()
             )
         ");
-        $insProf->execute([$appUserId, $appEmail]);
-        $applicantId = (int)$pdo->lastInsertId();
+        $insProf->execute([$appUserId, $appUserId, $appEmail]);
+        $applicantId = $appUserId;
     }
 
     // Pre-seed Education (Step 2 completed) so the user experiences the live continuation from Step 3

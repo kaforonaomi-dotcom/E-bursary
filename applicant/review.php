@@ -96,7 +96,9 @@ $errors = [];
 
 // Handle Final Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!$canSubmit) {
+    if ($isClosed) {
+        $errors[] = 'The application is currently closed.';
+    } elseif (!$canSubmit) {
         $errors[] = 'You cannot submit the application until all required fields and documents are provided.';
     } elseif (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid security token. Please try again.';
@@ -173,6 +175,19 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
         <div class="container-fluid p-0" style="max-width: 950px;">
             <?php echo renderFlash(); ?>
             <?php echo renderApplicantWizardHtml('review', $wizardSteps); ?>
+
+            <?php if ($isClosed): ?>
+                <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                    <i class="bi bi-exclamation-octagon-fill fs-3 me-3 text-danger"></i>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-1">Application Closed</h6>
+                        <span class="fs-6">The application is currently closed.</span>
+                        <?php if (!empty($sysDeadline)): ?>
+                            <div class="small fw-semibold mt-1">Closing Date was: <?php echo date('F d, Y', strtotime($sysDeadline)); ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <?php if (!empty($errors)): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -311,8 +326,12 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                             <a href="documents.php" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i> Back to Documents
                             </a>
-                            <button type="submit" class="btn btn-green px-4 py-2 fs-6 <?php echo $canSubmit ? 'pulse-btn' : ''; ?>" <?php echo !$canSubmit ? 'disabled' : ''; ?> data-confirm="Are you sure you want to submit your bursary application? Once submitted, you cannot edit your details.">
-                                <i class="bi bi-send-check-fill me-2"></i> Submit Application Now
+                            <button type="submit" class="btn <?php echo $isClosed ? 'btn-secondary' : 'btn-green'; ?> px-4 py-2 fs-6 <?php echo $canSubmit ? 'pulse-btn' : ''; ?>" <?php echo !$canSubmit ? 'disabled' : ''; ?> <?php echo !$isClosed ? 'data-confirm="Are you sure you want to submit your bursary application? Once submitted, you cannot edit your details."' : ''; ?>>
+                                <?php if ($isClosed): ?>
+                                    <i class="bi bi-lock-fill me-2"></i> The application is currently closed
+                                <?php else: ?>
+                                    <i class="bi bi-send-check-fill me-2"></i> Submit Application Now
+                                <?php endif; ?>
                             </button>
                         </div>
                     </form>

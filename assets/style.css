@@ -478,65 +478,66 @@ a.step-item:hover .step-circle {
    Screenshot-Matched Available Bursaries Showcase Component
    ============================================================ */
 .bursaries-showcase {
-    background: #0b1120; /* Deep navy / dark slate container from screenshot */
-    border: 1px solid #1e293b;
+    background: #ffffff; /* Clean white container */
+    border: 1px solid #e5e7eb;
     border-radius: 16px;
-    padding: 30px 24px;
+    padding: 28px 24px;
     margin-bottom: 28px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    color: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    color: #1f2937;
 }
 
 .bursaries-banner {
-    background-color: #062a1c;
-    border: 1px solid #0f5132;
-    color: #2ecc71;
+    background-color: #e8f5ee;
+    border: 1px solid #badbcc;
+    color: #0f5132;
     text-align: center;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    margin-bottom: 26px;
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 600;
+    margin-bottom: 24px;
     letter-spacing: 0.2px;
 }
 
 .bursaries-title {
-    color: #ffffff;
-    font-size: 1.95rem;
-    font-weight: 700;
+    color: #1f2937;
+    font-size: 1.85rem;
+    font-weight: 800;
     text-align: center;
-    margin-bottom: 26px;
+    margin-bottom: 24px;
     letter-spacing: -0.3px;
 }
 
 .bursary-card-dark {
-    background-color: #111a2e;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
     padding: 24px 22px;
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .bursary-card-dark:hover {
     transform: translateY(-3px);
-    border-color: #e5a93c;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    border-color: #198754;
+    box-shadow: 0 8px 24px rgba(25, 135, 84, 0.12);
 }
 
 .bursary-card-dark.is-closed {
-    border-color: #ef4444;
-    background-color: #171324;
+    border-color: #fca5a5;
+    background-color: #fffbfa;
 }
 
 .bursary-category-name {
-    color: #e5a93c; /* Golden Amber title from screenshot */
-    font-size: 1.45rem;
+    color: #0f5132;
+    font-size: 1.35rem;
     font-weight: 700;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -546,22 +547,22 @@ a.step-item:hover .step-circle {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 16px;
+    padding-bottom: 14px;
     margin-bottom: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid #edf2f7;
 }
 
 .bursary-funds-label {
-    color: #94a3b8; /* Muted light gray from screenshot */
+    color: #64748b;
     font-size: 14.5px;
     font-weight: 500;
 }
 
 .bursary-funds-amount {
-    color: #e5a93c; /* Golden Amber amount from screenshot */
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
+    color: #198754;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.2px;
 }
 
 .bursary-admin-meta {
@@ -570,43 +571,84 @@ a.step-item:hover .step-circle {
     align-items: center;
     font-size: 12.5px;
     color: #64748b;
-    margin-bottom: 18px;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+}
+
+.bursary-deadline-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: #334155;
+    background: #e8f5ee;
+    border: 1px solid #d1e7dd;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-weight: 600;
 }
 
 .btn-bursary-apply {
-    background-color: #e5a93c; /* Full-width golden button from screenshot */
-    color: #0b1120 !important;
-    font-weight: 700;
-    font-size: 15px;
+    background-color: #198754;
+    color: #ffffff !important;
+    font-weight: 600;
+    font-size: 14.5px;
     border: none;
     border-radius: 8px;
-    padding: 12px 0;
+    padding: 11px 0;
     width: 100%;
     text-align: center;
     text-decoration: none;
     display: block;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.15s ease;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .btn-bursary-apply:hover {
-    background-color: #f59e0b;
-    color: #000000 !important;
+    background-color: #157347;
+    color: #ffffff !important;
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25);
 }
 
 .btn-bursary-apply.disabled,
 .btn-bursary-apply:disabled {
-    background-color: #334155;
+    background-color: #e2e8f0;
     color: #94a3b8 !important;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
 }
 
 .bursary-showcase-footer {
     margin-top: 24px;
-    padding-top: 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 18px 20px;
+    border-top: 1px solid #e5e7eb;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #edf2f7;
+}
+
+.bursary-showcase-footer .stat-item {
+    padding: 4px 0;
+}
+
+.bursary-showcase-footer .stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.bursary-showcase-footer .stat-val {
+    font-size: 1.15rem;
+    font-weight: 800;
 }
 
 /* Footer */

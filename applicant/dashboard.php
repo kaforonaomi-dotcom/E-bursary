@@ -57,6 +57,8 @@ $recentNotifications = $notifStmt->fetchAll();
 $wizardSteps = getApplicantStepsStatus($pdo, $applicant['id'], $applicant);
 $progressPercent = $wizardSteps['percentage'];
 $isSubmitted = $wizardSteps['is_submitted'];
+$isSystemClosed = $wizardSteps['is_system_closed'] ?? false;
+$sysDeadline = $wizardSteps['system_deadline'] ?? '';
 
 $pageTitle = 'Applicant Dashboard';
 $activeNav = 'dashboard';
@@ -89,6 +91,19 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
         <div class="container-fluid p-0">
             <?php echo renderFlash(); ?>
 
+            <?php if ($isSystemClosed && !$isSubmitted): ?>
+                <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                    <i class="bi bi-exclamation-octagon-fill fs-3 me-3 text-danger"></i>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-1">Application Closed</h6>
+                        <span class="fs-6">The application is currently closed.</span>
+                        <?php if (!empty($sysDeadline)): ?>
+                            <div class="small fw-semibold mt-1">Closing Date was: <?php echo date('F d, Y', strtotime($sysDeadline)); ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- WELCOME BANNER -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
                 <div>
@@ -100,6 +115,10 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                         <a href="status.php" class="btn btn-outline-green">
                             <i class="bi bi-clipboard-check me-1"></i> View Application Status
                         </a>
+                    <?php elseif ($isSystemClosed): ?>
+                        <button class="btn btn-secondary" disabled>
+                            <i class="bi bi-lock-fill me-1"></i> The application is currently closed
+                        </button>
                     <?php elseif ($wizardSteps['can_submit']): ?>
                         <a href="review.php" class="btn btn-green pulse-btn">
                             <i class="bi bi-send-check me-1"></i> Review & Submit Application <i class="bi bi-arrow-right ms-1"></i>

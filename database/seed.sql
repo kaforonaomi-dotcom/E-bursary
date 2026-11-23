@@ -44,7 +44,7 @@ VALUES
         15000.00,
         2000000.00,
         CURDATE(),
-        DATE_ADD(CURDATE(), INTERVAL 90 DAY),
+        DATE_ADD(CURDATE(), INTERVAL 45 DAY), -- Same closing date as High School
         'active',
         NOW()
     )

@@ -192,6 +192,8 @@ $missingDocs = $wizardSteps['missing_docs'];
 $uploadedMandatoryCount = $wizardSteps['steps']['documents']['uploaded_count'];
 $totalMandatoryCount = $wizardSteps['steps']['documents']['total_required'];
 $isAllMandatoryUploaded = ($uploadedMandatoryCount >= $totalMandatoryCount);
+$isSystemClosed = $wizardSteps['is_system_closed'] ?? false;
+$sysDeadline = $wizardSteps['system_deadline'] ?? '';
 
 $pageTitle = 'Supporting Documents';
 $activeNav = 'documents';
@@ -219,6 +221,19 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
             <?php echo renderFlash(); ?>
             <?php echo renderApplicantWizardHtml('documents', $wizardSteps); ?>
 
+            <?php if ($isSystemClosed): ?>
+                <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                    <i class="bi bi-exclamation-octagon-fill fs-3 me-3 text-danger"></i>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-1">Application Closed</h6>
+                        <span class="fs-6">The application is currently closed.</span>
+                        <?php if (!empty($sysDeadline)): ?>
+                            <div class="small fw-semibold mt-1">Closing Date was: <?php echo date('F d, Y', strtotime($sysDeadline)); ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Document Upload Progress Banner -->
             <?php if ($isAllMandatoryUploaded): ?>
                 <div class="alert alert-success d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 shadow-sm">
@@ -229,9 +244,15 @@ require_once __DIR__ . '/../includes/applicant-sidebar.php';
                             <span class="small">All required documents are present. You can immediately move to the final review and submit your application!</span>
                         </div>
                     </div>
-                    <a href="review.php" class="btn btn-green btn-lg px-4 text-nowrap pulse-btn shadow-sm">
-                        Continue to Review & Submit <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
+                    <?php if ($isSystemClosed): ?>
+                        <button class="btn btn-secondary btn-lg px-4 text-nowrap shadow-sm" disabled>
+                            <i class="bi bi-lock-fill me-1"></i> The application is currently closed
+                        </button>
+                    <?php else: ?>
+                        <a href="review.php" class="btn btn-green btn-lg px-4 text-nowrap pulse-btn shadow-sm">
+                            Continue to Review & Submit <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
                 <div class="alert alert-warning d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 shadow-sm">
